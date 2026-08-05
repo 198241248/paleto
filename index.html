@@ -66,9 +66,14 @@
   </div>
 
 <script>
+  // Webhooki przypisane bezpośrednio w kodzie
+  const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
+  const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534552834865889443/RShDnyLUsf4T9_34u8Zd6lryFuuAsd0PgDQbMKfqhwRRgowiHLp3R0_h2mzIm-XLKl-3";
+
   async function checkLicense() {
     const inputVal = document.getElementById('licenseInput').value.trim();
     const errorEl = document.getElementById('authError');
+    const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
     if (!inputVal) return;
 
@@ -81,13 +86,36 @@
       const data = await response.json();
 
       if (data.success) {
+        // SUKCES - Wyślij log na drugi webhook
         sessionStorage.setItem('paleto_auth', 'true');
         document.getElementById('authOverlay').style.display = 'none';
         document.getElementById('mainContent').style.display = 'flex';
+
+        try {
+          await fetch(WEBHOOK_SUCCESS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: `✅ **Nowe logowanie o godzinie ${loginTime}**\n> Użyty klucz: \`${inputVal}\``
+            })
+          });
+        } catch(err) {}
+
       } else {
+        // BŁĄD / ZŁE HASŁO - Wyślij log na pierwszy webhook
         errorEl.innerText = data.message || "Błędny lub wykorzystany klucz!";
         errorEl.style.display = 'block';
         document.getElementById('licenseInput').value = '';
+
+        try {
+          await fetch(WEBHOOK_FAILED, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: `❌ **Błędna próba logowania o godzinie ${loginTime}**\n> Wprowadzony klucz: \`${inputVal}\``
+            })
+          });
+        } catch(err) {}
       }
     } catch (e) {
       errorEl.innerText = "Błąd połączenia z serwerem.";
