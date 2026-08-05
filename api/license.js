@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
   // 1. GENEROWANIE KLUCZA
   if (action === 'generate') {
-    if (adminPass !== "ADMIN123") {
+    if (adminPass !== "lxowqxeqxwekopxqwkoq") { 
       return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
     }
 
