@@ -66,7 +66,10 @@
   </div>
 
 <script>
-  // Webhooki przypisane bezpośrednio w kodzie
+  // Baza poprawnych kluczy bezpośrednio w kodzie
+  const validKeys = ["PALETO2026", "VIP-ACCESS"];
+
+  // Webhooki podane przez Ciebie
   const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
   const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534552834865889443/RShDnyLUsf4T9_34u8Zd6lryFuuAsd0PgDQbMKfqhwRRgowiHLp3R0_h2mzIm-XLKl-3";
 
@@ -77,49 +80,37 @@
 
     if (!inputVal) return;
 
-    try {
-      const response = await fetch('/api/license', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', key: inputVal })
-      });
-      const data = await response.json();
+    if (validKeys.includes(inputVal)) {
+      // SUKCES
+      sessionStorage.setItem('paleto_auth', 'true');
+      document.getElementById('authOverlay').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'flex';
 
-      if (data.success) {
-        // SUKCES - Wyślij log na drugi webhook
-        sessionStorage.setItem('paleto_auth', 'true');
-        document.getElementById('authOverlay').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'flex';
+      try {
+        await fetch(WEBHOOK_SUCCESS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `✅ **Nowe logowanie o godzinie ${loginTime}**\n> Użyty klucz: \`${inputVal}\``
+          })
+        });
+      } catch(err) {}
 
-        try {
-          await fetch(WEBHOOK_SUCCESS, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: `✅ **Nowe logowanie o godzinie ${loginTime}**\n> Użyty klucz: \`${inputVal}\``
-            })
-          });
-        } catch(err) {}
-
-      } else {
-        // BŁĄD / ZŁE HASŁO - Wyślij log na pierwszy webhook
-        errorEl.innerText = data.message || "Błędny lub wykorzystany klucz!";
-        errorEl.style.display = 'block';
-        document.getElementById('licenseInput').value = '';
-
-        try {
-          await fetch(WEBHOOK_FAILED, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: `❌ **Błędna próba logowania o godzinie ${loginTime}**\n> Wprowadzony klucz: \`${inputVal}\``
-            })
-          });
-        } catch(err) {}
-      }
-    } catch (e) {
-      errorEl.innerText = "Błąd połączenia z serwerem.";
+    } else {
+      // BŁĄD / ZŁE HASŁO
+      errorEl.innerText = "Błędny lub wykorzystany klucz!";
       errorEl.style.display = 'block';
+      document.getElementById('licenseInput').value = '';
+
+      try {
+        await fetch(WEBHOOK_FAILED, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `❌ **Błędna próba logowania o godzinie ${loginTime}**\n> Wprowadzony klucz: \`${inputVal}\``
+          })
+        });
+      } catch(err) {}
     }
   }
 
