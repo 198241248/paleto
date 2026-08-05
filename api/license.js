@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   const { action, key, adminPass, clientInfo } = req.body;
   const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
-  // Wyciąganie adresu IP użytkownika bezpośrednio z serwera Vercela
+  // Pobieranie IP użytkownika z nagłówków Vercela
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Nieznane IP';
 
   // AKCJA 1: GENEROWANIE KLUCZA
@@ -61,7 +61,6 @@ export default async function handler(req, res) {
 
     global.usedKeys.push(key);
 
-    // Pobieramy aktualną godzinę w Polsce
     const loginTime = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
     if (DISCORD_WEBHOOK_URL) {
@@ -73,7 +72,7 @@ export default async function handler(req, res) {
             content: `🚨 **UDANE LOGOWANIE DO SYSTEMU!**\n` +
                      `> 🔑 Klucz: \`${key}\`\n` +
                      `> 🌐 Adres IP: \`${ip}\`\n` +
-                     `> 💻 Urządzenie/Przeglądarka: \`${clientInfo || 'Standardowa sesja'}\`\n` +
+                     `> 💻 Urządzenie/Przeglądarka: \`${clientInfo || 'Brak danych'}\`\n` +
                      `> ⏰ Godzina: \`${loginTime}\``
           })
         });
