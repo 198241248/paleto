@@ -8,6 +8,10 @@
 <body>
 
 <script>
+      if (sessionStorage.getItem('paleto_auth') !== 'true') {
+  alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
+  window.location.href = 'index.html';
+}
   // 1. Dynamiczne wstrzykiwanie stylów CSS przez JavaScript
   const style = document.createElement('style');
   style.innerHTML = `

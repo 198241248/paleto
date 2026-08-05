@@ -205,6 +205,10 @@
   </div>
 
 <script>
+      if (sessionStorage.getItem('paleto_auth') !== 'true') {
+  alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
+  window.location.href = 'index.html';
+}
   let peer;
   let connsMap = {}; 
   let hostConn = null; 

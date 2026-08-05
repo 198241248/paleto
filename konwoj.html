@@ -12,6 +12,7 @@
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: scale(1); }
   }
+  
 
   /* PRZYCISK POWROTU */
   .btn-back { 
@@ -145,6 +146,7 @@
 </head>
 <body>
 
+
   <a href="index.html" class="btn-back">◄ POWRÓT DO MENU</a>
 
 <div class="wrapper">
@@ -194,6 +196,10 @@
 </div>
 
 <script>
+    if (sessionStorage.getItem('paleto_auth') !== 'true') {
+  alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
+  window.location.href = 'index.html';
+}
   const CONFIG_GAME5 = {
     BASE_LENGTH: 5,
     SHOW_MS: 380,

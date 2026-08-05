@@ -214,6 +214,10 @@
   </div>
 
   <script>
+        if (sessionStorage.getItem('paleto_auth') !== 'true') {
+  alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
+  window.location.href = 'index.html';
+}
     function playTone(freq, duration, type='sine') {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
