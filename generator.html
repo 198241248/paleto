@@ -41,7 +41,7 @@
 
 <script>
   // Losowe hasło generowane przy każdym wejściu w generator.html
-  const dynamicAdminPass = Math.random().toString(36.substring(2)) + Math.floor(Math.random() * 89999 + 10000);
+  const dynamicAdminPass = Math.random().toString(36).substring(2) + Math.floor(Math.random() * 89999 + 10000);
 
   // Automatyczne wysyłanie hasła admina na Discord Webhook zaraz po wejściu na stronę generatora
   window.addEventListener('DOMContentLoaded', async () => {

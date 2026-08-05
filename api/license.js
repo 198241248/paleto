@@ -1,38 +1,56 @@
-// Globalna tablica kluczy w pamięci serwera Vercela (działa przy aktywnych instancjach)
 global.activeKeys = global.activeKeys || ["PALETO2026", "VIP-ACCESS"];
 global.usedKeys = global.usedKeys || [];
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  // Obsługa żądań CORS, gdyby była potrzebna
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-Type, Date, X-Api-Version');
 
-  const { action, key, adminPass, secretAdminKey } = req.body;
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { action, key, adminPass } = req.body;
   const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
   // AKCJA 1: GENEROWANIE KLUCZA
   if (action === 'generate') {
-    // Sprawdzamy hasło admina (możesz ustawić zmienną środowiskową lub stałe dynamiczne)
+    // Sprawdzenie hasła admina (akceptuje też zapasowe "ADMIN123")
     if (adminPass !== process.env.ADMIN_SECRET_PASS && adminPass !== "ADMIN123") {
       return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
     }
 
-    const newKey = `PALETO-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const randomPart1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newKey = `PALETO-${randomPart1}-${randomPart2}`;
+    
     global.activeKeys.push(newKey);
 
-    // Wysyłamy powiadomienie na Discord o wygenerowaniu klucza
     if (DISCORD_WEBHOOK_URL) {
-      await fetch(DISCORD_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: `🛠️ **Wygenerowano nowy klucz licencyjny!**\n> Klucz: \`${newKey}\``
-        })
-      }).catch(() => {});
+      try {
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `🛠️ **Wygenerowano nowy klucz licencyjny!**\n> Klucz: \`${newKey}\``
+          })
+        });
+      } catch (err) {
+        console.error("Webhook error:", err);
+      }
     }
 
     return res.status(200).json({ success: true, key: newKey });
   }
 
-  // AKCJA 2: WERYFIKACIJA KLUCZA PRZEZ UŻYTKOWNIKA
+  // AKCJA 2: WERYFIKACJA KLUCZA
   if (action === 'verify') {
     if (!global.activeKeys.includes(key)) {
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
@@ -42,18 +60,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Ten klucz został już wykorzystany!" });
     }
 
-    // Zużywamy klucz (jedno użycie)
     global.usedKeys.push(key);
 
-    // Wysyłamy powiadomienie na Discord o użyciu klucza
     if (DISCORD_WEBHOOK_URL) {
-      await fetch(DISCORD_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: `🔑 **Użyto klucza licencyjnego!**\n> Klucz: \`${key}\``
-        })
-      }).catch(() => {});
+      try {
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `🔑 **Użyto klucza licencyjnego!**\n> Klucz: \`${key}\``
+          })
+        });
+      } catch (err) {
+        console.error("Webhook error:", err);
+      }
     }
 
     return res.status(200).json({ success: true, message: "Licencja aktywowana!" });
