@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Menu główne</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+
+  @keyframes fadeScaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .selection-screen { text-align: center; max-width: 1000px; width: 100%; padding: 20px; animation: fadeScaleIn 0.3s ease-out; }
+  .selection-title { font-family: 'Teko', sans-serif; font-size: 56px; letter-spacing: 3px; color: #4dd8ff; text-shadow: 0 0 20px rgba(77,216,255,0.3); text-transform: uppercase; margin-bottom: 5px; }
+  .author-subtitle { font-size: 14px; color: #7d8590; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+  .hack-card { background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 25px; cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); text-align: left; position: relative; text-decoration: none; display: block; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .hack-card:hover:not(.disabled) { border-color: #4dd8ff; transform: translateY(-5px); box-shadow: 0 8px 24px rgba(77,216,255,0.15); }
+  
+  /* Poprawione marginesy dla nagłówka i tekstu w karcie */
+  .hack-card h3 { font-family: 'Teko', sans-serif; font-size: 28px; color: #4dd8ff; margin-bottom: 0px; line-height: 24px; }
+  .hack-card p { font-size: 13px; color: #8b949e; line-height: 1.4; margin-top: -4px; }
+  
+  .hack-card.disabled { opacity: 0.35; cursor: not-allowed; border-color: #1f2937; }
+  .badge-soon { position: absolute; top: 15px; right: 15px; background: #1f2937; color: #8b949e; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+  <div class="selection-screen">
+    <div class="selection-title">SYMULATOR HACKÓW</div>
+    
+    <div class="cards-grid">
+      <!-- Przejście do Banku Paleto -->
+      <a href="paleto.html" class="hack-card">
+        <h3>BANK PALETO </h3>
+        <p>* Tryb wieloosobowy</p>
+      </a>
+
+      
+      <a href="maze.html" class="hack-card">
+        <h3>BANK MAZE</h3>
+                <p>* Tryb wieloosobowy</p>
+
+      </a>
+
+
+      <a href="kasyno.html" class="hack-card disabled">
+                <span class="badge-soon">Wkrótce</span>
+        <h3>KASYNO</h3>
+      </a>
+
+      <!-- Przejście do osobnej podstrony Sekwencji -->
+      <a href="sekwencja.html" class="hack-card">
+        <h3>SEKWENCJA BANK PALETO</h3>
+      </a>
+
+      <!-- Przejście do Banku Pine -->
+      <a href="pine.html" class="hack-card">
+        <h3>BANK PINE</h3>
+      </a>
+
+      <!-- Nowy hack: Spirala (Villa) -->
+      <a href="villa.html" class="hack-card">
+        <h3>VILLA</h3>
+      </a>
+
+      <div class="hack-card disabled">
+                <h3>AMMUNATION</h3>
+        <span class="badge-soon">Wkrótce</span>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
