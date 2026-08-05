@@ -132,9 +132,9 @@
   <div class="ready-screen" id="readyScreen">
     <div class="ready-title">POCZEKALNIA POKOJU</div>
     <div id="slotsContainer">
-      <div class="player-slot"><span>1. Niemowa</span><span class="status-badge waiting" id="status-niemowa">OCZEKIWANIE...</span></div>
-      <div class="player-slot"><span>2. Pośrednik</span><span class="status-badge waiting" id="status-posrednik">OCZEKIWANIE...</span></div>
-      <div class="player-slot"><span>3. Niewidomy</span><span class="status-badge waiting" id="status-niewidomy">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span id="text-niemowa">1. Niemowa: [Wolne]</span><span class="status-badge waiting" id="status-niemowa">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span id="text-posrednik">2. Pośrednik: [Wolne]</span><span class="status-badge waiting" id="status-posrednik">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span id="text-niewidomy">3. Niewidomy: [Wolne]</span><span class="status-badge waiting" id="status-niewidomy">OCZEKIWANIE...</span></div>
     </div>
     <button class="btn-ready" id="btnReady" onclick="toggleReady()">JESTEM GOTÓW</button>
     <div class="countdown-overlay" id="countdownOverlay">3</div>
@@ -210,7 +210,13 @@
   let hostConn = null; 
   let myRole = 'niemowa', myNick = 'Gracz', roomId = '';
   let isReady = false;
-  let readyStates = { niemowa: false, posrednik: false, niewidomy: false };
+  
+  let roomPlayers = {
+    niemowa: { nick: '', ready: false },
+    posrednik: { nick: '', ready: false },
+    niewidomy: { nick: '', ready: false }
+  };
+
   let timeLeft = 180;
   let timerInterval;
 
@@ -255,9 +261,14 @@
     document.getElementById('lobbyScreen').style.display = 'none';
     document.getElementById('readyScreen').style.display = 'block';
 
-    peer = new Peer(`${roomId}-${myRole}`);
+    peer = new Peer(`${roomId}-${myRole}`, {
+      host: '0.peerjs.com',
+      port: 443,
+      secure: true
+    });
+
     peer.on('open', () => {
-      readyStates[myRole] = false;
+      roomPlayers[myRole] = { nick: myNick, ready: false };
       updateReadyUI();
       if (myRole !== 'niemowa') connectToHost();
     });
@@ -274,14 +285,14 @@
   function connectToHost() {
     hostConn = peer.connect(`${roomId}-niemowa`);
     hostConn.on('open', () => {
-      hostConn.send({ type: 'JOIN_LOBBY', role: myRole });
+      hostConn.send({ type: 'JOIN_LOBBY', role: myRole, nick: myNick });
     });
     hostConn.on('data', (data) => handleData(data, hostConn));
   }
 
   function toggleReady() {
     isReady = !isReady;
-    readyStates[myRole] = isReady;
+    roomPlayers[myRole].ready = isReady;
     const btn = document.getElementById('btnReady');
     if(isReady) {
       btn.innerText = "COFNIJ GOTOWOŚĆ";
@@ -292,7 +303,7 @@
     }
 
     if (myRole === 'niemowa') {
-      broadcastToAll({ type: 'LOBBY_STATE', states: readyStates });
+      broadcastToAll({ type: 'LOBBY_STATE', players: roomPlayers });
       updateReadyUI();
       checkAllReady();
     } else if (hostConn && hostConn.open) {
@@ -301,14 +312,30 @@
   }
 
   function updateReadyUI() {
-    for(let role in readyStates) {
+    const rolesMap = {
+      niemowa: '1. Niemowa',
+      posrednik: '2. Pośrednik',
+      niewidomy: '3. Niewidomy'
+    };
+
+    for(let role in rolesMap) {
       const badge = document.getElementById(`status-${role}`);
-      if(badge) {
-        if(readyStates[role]) {
-          badge.innerText = "GOTÓW";
-          badge.className = "status-badge ready";
+      const textSpan = document.getElementById(`text-${role}`);
+      const pData = roomPlayers[role];
+      
+      if(badge && textSpan) {
+        if(pData && pData.nick) {
+          textSpan.innerText = `${rolesMap[role]}: ${pData.nick}`;
+          if(pData.ready) {
+            badge.innerText = "GOTÓW";
+            badge.className = "status-badge ready";
+          } else {
+            badge.innerText = "OCZEKIWANIE...";
+            badge.className = "status-badge waiting";
+          }
         } else {
-          badge.innerText = "OCZEKIWANIE...";
+          textSpan.innerText = `${rolesMap[role]}: [Wolne]`;
+          badge.innerText = "BRAK";
           badge.className = "status-badge waiting";
         }
       }
@@ -316,7 +343,7 @@
   }
 
   function checkAllReady() {
-    if(readyStates.niemowa && readyStates.posrednik && readyStates.niewidomy) {
+    if(roomPlayers.niemowa.ready && roomPlayers.posrednik.ready && roomPlayers.niewidomy.ready) {
       if(myRole === 'niemowa') {
         broadcastToAll({ type: 'START_COUNTDOWN' });
         startCountdown();
@@ -344,7 +371,7 @@
   function startGame() {
     document.getElementById('readyScreen').style.display = 'none';
     document.getElementById('gameLayout').style.display = 'flex';
-    document.getElementById('playersList').innerText = `Gracz: ${myNick} (${myRole.toUpperCase()})`;
+    document.getElementById('playersList').innerText = `Gracz: ${myNick} | Rola: ${myRole.toUpperCase()}`;
 
     if(myRole === 'posrednik') {
       document.getElementById('binderContainer').style.display = 'flex';
@@ -422,11 +449,12 @@
     if (myRole === 'niemowa') {
       if (data.type === 'JOIN_LOBBY') {
         connsMap[data.role] = conn;
-        broadcastToAll({ type: 'LOBBY_STATE', states: readyStates });
+        roomPlayers[data.role].nick = data.nick;
+        broadcastToAll({ type: 'LOBBY_STATE', players: roomPlayers });
         updateReadyUI();
       } else if (data.type === 'READY_CHANGE') {
-        readyStates[data.role] = data.ready;
-        broadcastToAll({ type: 'LOBBY_STATE', states: readyStates });
+        roomPlayers[data.role].ready = data.ready;
+        broadcastToAll({ type: 'LOBBY_STATE', players: roomPlayers });
         updateReadyUI();
         checkAllReady();
       } else if (data.type === 'CHAT') {
@@ -445,7 +473,7 @@
       }
     } else {
       if (data.type === 'LOBBY_STATE') {
-        readyStates = data.states;
+        roomPlayers = data.players;
         updateReadyUI();
       } else if (data.type === 'START_COUNTDOWN') {
         startCountdown();

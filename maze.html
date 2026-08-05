@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>maze bank</title>
+  <title>Maze Bank</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -32,7 +32,7 @@
 
   .ready-screen { display: none; width: 100%; max-width: 500px; background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 25px; text-align: center; animation: fadeScaleIn 0.3s ease-out; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
   .ready-title { font-family: 'Teko', sans-serif; font-size: 36px; color: #4dd8ff; margin-bottom: 15px; }
-  .player-slot { display: flex; justify-content: space-between; align-items: center; background: #0d1117; padding: 12px 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #1f2937; }
+  .player-slot { display: flex; justify-content: space-between; align-items: center; background: #0d1117; padding: 12px 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #1f2937; font-size: 14px; }
   .status-badge { font-weight: bold; font-size: 12px; padding: 4px 8px; border-radius: 4px; }
   .status-badge.ready { background: #1f6feb; color: #fff; }
   .status-badge.waiting { background: #d29922; color: #fff; }
@@ -102,11 +102,11 @@
   </div>
 
   <div class="ready-screen" id="readyScreen">
-    <div class="ready-title">POCZEKALNIA POKOJU (3 ROLE)</div>
+    <div class="ready-title">POCZEKALNIA POKOJU</div>
     <div id="slotsContainer">
-      <div class="player-slot"><span>1. Haker</span><span class="status-badge waiting" id="status-haker">OCZEKIWANIE...</span></div>
-      <div class="player-slot"><span>2. Zwiadowca</span><span class="status-badge waiting" id="status-zwiadowca">OCZEKIWANIE...</span></div>
-      <div class="player-slot"><span>3. Technik</span><span class="status-badge waiting" id="status-technik">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span id="text-haker">1. Haker: [Wolne]</span><span class="status-badge waiting" id="status-haker">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span id="text-zwiadowca">2. Zwiadowca: [Wolne]</span><span class="status-badge waiting" id="status-zwiadowca">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span id="text-technik">3. Technik: [Wolne]</span><span class="status-badge waiting" id="status-technik">OCZEKIWANIE...</span></div>
     </div>
     <button class="btn-ready" id="btnReady" onclick="toggleReady()">JESTEM GOTÓW</button>
     <div class="countdown-overlay" id="countdownOverlay">3</div>
@@ -143,7 +143,13 @@
   let hostConn = null; 
   let myRole = 'haker', myNick = 'Gracz', roomId = '';
   let isReady = false;
-  let readyStates = { haker: false, zwiadowca: false, technik: false };
+  
+  let roomPlayers = {
+    haker: { nick: '', ready: false },
+    zwiadowca: { nick: '', ready: false },
+    technik: { nick: '', ready: false }
+  };
+
   let timeLeft = 180;
   let timerInterval;
 
@@ -177,25 +183,26 @@
       peer.destroy();
     }
 
-    peer = new Peer(peerId);
+    peer = new Peer(peerId, {
+      host: '0.peerjs.com',
+      port: 443,
+      secure: true
+    });
 
     peer.on('open', () => {
-      console.log("Połączono z PeerJS, mój ID:", peerId);
-      readyStates[myRole] = false;
+      roomPlayers[myRole] = { nick: myNick, ready: false };
       isReady = false;
       updateReadyUI();
 
       if (myRole !== 'haker') {
         connectToHost();
-      } else {
-        readyStates.haker = false;
       }
     });
 
     peer.on('error', (err) => {
       console.error("PeerJS error:", err);
       if(err.type === 'unavailable-id') {
-        alert("Ta rola w tym pokoju jest już zajęta! Sprawdź, czy nie masz jej otwartej w innej karcie.");
+        alert("Ta rola w tym pokoju jest już zajęta!");
       } else {
         alert("Błąd PeerJS: " + err.type);
       }
@@ -205,8 +212,6 @@
     if (myRole === 'haker') {
       peer.on('connection', (conn) => {
         conn.on('open', () => {
-          console.log("Klient połączył się do Hakera:", conn.peer);
-          
           conn.on('data', (data) => {
             handleHakerServerData(data, conn);
           });
@@ -215,7 +220,7 @@
             for(let r in connsMap) {
               if(connsMap[r] === conn) {
                 connsMap[r] = null;
-                readyStates[r] = false;
+                roomPlayers[r] = { nick: '', ready: false };
               }
             }
             broadcastLobbyState();
@@ -227,13 +232,10 @@
 
   function connectToHost() {
     const hostId = `${roomId}-haker`;
-    console.log("Łączenie z hostem (Hakerem):", hostId);
-    
     setTimeout(() => {
       hostConn = peer.connect(hostId);
       
       hostConn.on('open', () => {
-        console.log("Połączono z Hakerem pomyślnie!");
         hostConn.send({ type: 'REGISTER', role: myRole, nick: myNick });
       });
       
@@ -243,7 +245,7 @@
 
       hostConn.on('error', (err) => {
         console.error("Błąd połączenia z Hakerem:", err);
-        alert("Nie można połączyć się z Hakerem! Upewnij się, że gracz z rolą Haker dla tego pokoju uruchomił się jako pierwszy.");
+        alert("Nie można połączyć się z Hakerem! Upewnij się, że Haker uruchomił się jako pierwszy.");
       });
     }, 600);
   }
@@ -251,11 +253,11 @@
   function handleHakerServerData(data, conn) {
     if (data.type === 'REGISTER') {
       connsMap[data.role] = conn;
-      console.log(`Zarejestrowano gracza: ${data.role} (${data.nick})`);
+      roomPlayers[data.role].nick = data.nick;
       broadcastLobbyState();
     } 
     else if (data.type === 'READY_CHANGE') {
-      readyStates[data.role] = data.ready;
+      roomPlayers[data.role].ready = data.ready;
       broadcastLobbyState();
       checkAllReady();
     } 
@@ -277,7 +279,7 @@
     updateReadyUI();
     for (let r in connsMap) {
       if (connsMap[r] && connsMap[r].open) {
-        connsMap[r].send({ type: 'LOBBY_STATE', states: readyStates });
+        connsMap[r].send({ type: 'LOBBY_STATE', players: roomPlayers });
       }
     }
   }
@@ -300,7 +302,7 @@
 
   function handleClientData(data) {
     if (data.type === 'LOBBY_STATE') {
-      readyStates = data.states;
+      roomPlayers = data.players;
       updateReadyUI();
     } 
     else if (data.type === 'START_COUNTDOWN') {
@@ -327,7 +329,7 @@
 
   function toggleReady() {
     isReady = !isReady;
-    readyStates[myRole] = isReady;
+    roomPlayers[myRole].ready = isReady;
     const btn = document.getElementById('btnReady');
     
     if(isReady) {
@@ -348,14 +350,30 @@
   }
 
   function updateReadyUI() {
-    for(let role in readyStates) {
+    const rolesMap = {
+      haker: '1. Haker',
+      zwiadowca: '2. Zwiadowca',
+      technik: '3. Technik'
+    };
+
+    for(let role in rolesMap) {
       const badge = document.getElementById(`status-${role}`);
-      if(badge) {
-        if(readyStates[role]) {
-          badge.innerText = "GOTÓW";
-          badge.className = "status-badge ready";
+      const textSpan = document.getElementById(`text-${role}`);
+      const pData = roomPlayers[role];
+      
+      if(badge && textSpan) {
+        if(pData && pData.nick) {
+          textSpan.innerText = `${rolesMap[role]}: ${pData.nick}`;
+          if(pData.ready) {
+            badge.innerText = "GOTÓW";
+            badge.className = "status-badge ready";
+          } else {
+            badge.innerText = "OCZEKIWANIE...";
+            badge.className = "status-badge waiting";
+          }
         } else {
-          badge.innerText = "OCZEKIWANIE...";
+          textSpan.innerText = `${rolesMap[role]}: [Wolne]`;
+          badge.innerText = "BRAK";
           badge.className = "status-badge waiting";
         }
       }
@@ -363,7 +381,7 @@
   }
 
   function checkAllReady() {
-    if(readyStates.haker && readyStates.zwiadowca && readyStates.technik) {
+    if(roomPlayers.haker.ready && roomPlayers.zwiadowca.ready && roomPlayers.technik.ready) {
       if(myRole === 'haker') {
         generateGameData();
         for (let r in connsMap) {
@@ -435,7 +453,7 @@
   function startGame() {
     document.getElementById('readyScreen').style.display = 'none';
     document.getElementById('gameLayout').style.display = 'flex';
-    document.getElementById('playersList').innerText = `Gracz: ${myNick} (${myRole.toUpperCase()})`;
+    document.getElementById('playersList').innerText = `Gracz: ${myNick} | Rola: ${myRole.toUpperCase()}`;
 
     if(myRole === 'haker') {
       startTimer();
@@ -454,6 +472,7 @@
       if(timeLeft <= 0) {
         clearInterval(timerInterval);
         alert("Koniec czasu!");
+        location.reload();
       }
     }, 1000);
   }
