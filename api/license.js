@@ -1,5 +1,6 @@
 global.activeKeys = global.activeKeys || ["PALETO2026", "VIP-ACCESS"];
-global.usedKeys = global.usedKeys || [];
+// Przechowuje mapowanie: klucz -> identyfikator urządzenia (IP + User-Agent)
+global.keyBindings = global.keyBindings || {};
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -17,12 +18,17 @@ export default async function handler(req, res) {
   }
 
   const { action, key, adminPass } = req.body;
+  
+  // Wyciąganie IP klienta (Vercel przekazuje prawdziwe IP w nagłówkach)
+  const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown_ip';
+  const userAgent = req.headers['user-agent'] || 'unknown_agent';
+  const deviceId = `${clientIP}_${Buffer.from(userAgent).toString('base64').substring(0, 15)}`;
+
   const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534552834865889443/RShDnyLUsf4T9_34u8Zd6lryFuuAsd0PgDQbMKfqhwRRgowiHLp3R0_h2mzIm-XLKl-3";
   const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
-
   const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
-  // GENEROWANIE KLUCZA + LOG NA DISCORD
+  // 1. GENEROWANIE KLUCZA
   if (action === 'generate') {
     if (adminPass !== "ADMIN123") {
       return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
@@ -32,10 +38,8 @@ export default async function handler(req, res) {
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const newKey = `PALETO-${randomPart1}-${randomPart2}`;
     
-    // Zapis w pamięci (bazie)
     global.activeKeys.push(newKey);
 
-    // Wysłanie logu na Discord o wygenerowaniu klucza
     try {
       await fetch(WEBHOOK_SUCCESS, {
         method: 'POST',
@@ -47,33 +51,35 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, key: newKey });
   }
 
-  // WERYFIKACJA KLUCZA (TYLKO JEDEN UŻYTEK)
+  // 2. WERYFIKACJA I PRZYPISANIE DO URZĄDZENIA
   if (action === 'verify') {
     if (!global.activeKeys.includes(key)) {
       try {
         await fetch(WEBHOOK_FAILED, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: `❌ **Błędna próba logowania o godzinie ${loginTime}**\n> Wprowadzony klucz: \`${key}\`` })
+          body: JSON.stringify({ content: `❌ **Błędna próba logowania o ${loginTime}**\n> IP: \`${clientIP}\`\n> Klucz: \`${key}\`` })
         });
       } catch(e) {}
 
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
     }
 
-    // Sprawdzenie czy klucz już został zużyty
-    if (global.usedKeys.includes(key)) {
-      return res.status(400).json({ success: false, message: "Ten klucz został już wykorzystany!" });
+    // Sprawdzenie czy klucz jest już przypisany do kogoś innego
+    if (global.keyBindings[key]) {
+      if (global.keyBindings[key] !== deviceId) {
+        return res.status(400).json({ success: false, message: "Ten klucz jest przypisany do innego urządzenia!" });
+      }
+    } else {
+      // Pierwsze użycie - przypisujemy do tego urządzenia
+      global.keyBindings[key] = deviceId;
     }
-
-    // Oznaczenie klucza jako zużyty
-    global.usedKeys.push(key);
 
     try {
       await fetch(WEBHOOK_SUCCESS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `✅ **Nowe udane logowanie o godzinie ${loginTime}**\n> Użyty klucz: \`${key}\`` })
+        body: JSON.stringify({ content: `✅ **Udane logowanie o ${loginTime}**\n> IP: \`${clientIP}\`\n> Klucz: \`${key}\`` })
       });
     } catch(e) {}
 
