@@ -531,21 +531,19 @@
 
   window.addEventListener('keydown', (e) => {
     if (document.activeElement.id === 'chatInput') return;
-    if (gameState.module === 'haslo' && (myRole === 'niewidomy' || myRole === 'niemowa')) {
+    // Tylko niewidomy może teraz wpisywać hasło z klawiatury
+    if (gameState.module === 'haslo' && myRole === 'niewidomy') {
       if (e.key === 'Enter') {
-        if(myRole === 'niemowa') verifyWordSubmit();
-        else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_SUBMIT_WORD' });
+        if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_SUBMIT_WORD' });
         return;
       }
       if (e.key === 'Backspace') {
-        if(myRole === 'niemowa') processBackspaceInput();
-        else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_BACKSPACE' });
+        if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_BACKSPACE' });
         return;
       }
       const key = e.key.toUpperCase();
       if ("AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ".includes(key)) {
-        if(myRole === 'niemowa') processLetterInput(key);
-        else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_LETTER', letter: key });
+        if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_LETTER', letter: key });
       }
     }
   });
@@ -569,8 +567,10 @@
   }
 
   function submitWord() {
-    if(myRole === 'niemowa') verifyWordSubmit();
-    else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_SUBMIT_WORD' });
+    // Tylko Niewidomy może zatwierdzić hasło kliknięciem
+    if(myRole === 'niewidomy' && hostConn && hostConn.open) {
+      hostConn.send({ type: 'ACTION_SUBMIT_WORD' });
+    }
   }
 
   function verifyWordSubmit() {
@@ -710,10 +710,13 @@
         clueDisplay = `<div class="clue-text">PODPOWIEDŹ: ${pw.clue}</div>`;
       }
 
+      // Przycisk zatwierdzania widoczny tylko dla niewidomego
+      let submitButtonHtml = (myRole === 'niewidomy') ? '<button class="btn-submit-word" onclick="submitWord()">ZATWIERDŹ</button>' : '<div style="font-size:12px; color:#8b949e; margin-top:10px;">(Tylko Niewidomy może zatwierdzić hasło)</div>';
+
       contentBox.innerHTML = `
         <div style="text-align:center; width:100%;">
           ${boxesHtml}
-          <button class="btn-submit-word" onclick="submitWord()">ZATWIERDŹ</button>
+          ${submitButtonHtml}
           ${clueDisplay}
         </div>`;
     }

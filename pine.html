@@ -4,109 +4,117 @@
   <meta charset="UTF-8">
   <title>Bank Pine - Solo Hack Simulator</title>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-  body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; background-image: radial-gradient(#1f2937 2px, transparent 2px); background-size: 25px 25px; }
-
-  @keyframes fadeScaleIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
-  }
-
-  @keyframes scaleUpDot {
-    0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
-    20% { opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
-  }
-
-  .btn-back { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; text-decoration: none; transition: 0.2s; z-index: 10; cursor: pointer; }
-  .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
-
-  /* MENU */
-  .menu-screen { text-align: center; max-width: 600px; width: 100%; padding: 20px; animation: fadeScaleIn 0.3s ease-out; z-index: 2; }
-  .selection-title { font-family: 'Teko', sans-serif; font-size: 48px; letter-spacing: 3px; color: #4dd8ff; text-shadow: 0 0 20px rgba(77,216,255,0.3); text-transform: uppercase; margin-bottom: 5px; }
-  .stages-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 25px; }
-  .stage-card { background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 20px; text-align: left; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-  .stage-card:hover { border-color: #4dd8ff; background: #1a2332; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(77,216,255,0.15); }
-  .stage-info h3 { font-family: 'Teko', sans-serif; font-size: 28px; color: #4dd8ff; line-height: 24px; }
-  .stage-info p { font-size: 13px; color: #8b949e; margin-top: 4px; }
-  .stage-action { font-family: 'Teko', sans-serif; font-size: 20px; background: #4dd8ff; color: #0b0f14; padding: 6px 16px; border-radius: 6px; font-weight: bold; }
-
-  /* KONTENER GŁÓWNY MINIGR */
-  .game-container { display: none; width: 100%; max-width: 600px; background: #131822; border: 2px solid #1f2937; border-radius: 12px; padding: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; animation: fadeScaleIn 0.3s ease-out; z-index: 2; }
-  .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
-  .game-title { font-family: 'Teko', sans-serif; font-size: 26px; color: #4dd8ff; text-transform: uppercase; }
-  .btn-menu { background: #21262d; border: 1px solid #1f2937; color: #fff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: 'Teko', sans-serif; font-size: 16px; transition: 0.2s; }
-  .btn-menu:hover { border-color: #4dd8ff; }
-
-  /* ETAP 1: AIMLAB (NA CAŁYM EKRANIE) */
-  .aim-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; pointer-events: none; z-index: 1; }
-  .aim-dot { position: absolute; width: 65px; height: 65px; border-radius: 50%; background: #4dd8ff; box-shadow: 0 0 25px #4dd8ff; cursor: pointer; transform: translate(-50%, -50%); animation: scaleUpDot 1.2s linear forwards; pointer-events: auto; }
-  .aim-hud { position: absolute; top: 25px; right: 30px; font-family: 'Teko', sans-serif; font-size: 32px; color: #4dd8ff; text-shadow: 0 0 10px rgba(77,216,255,0.4); pointer-events: none; z-index: 10; }
-  
-  .aim-btn-menu { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; cursor: pointer; transition: 0.2s; z-index: 20; pointer-events: auto; }
-  .aim-btn-menu:hover { background: #1a2332; border-color: #4dd8ff; }
-
-  /* ETAP 2: WORDLE PIN */
-  .code-screen { width: 100%; height: 420px; background: #0d1117; border: 1px solid #1f2937; border-radius: 8px; display: flex; flex-direction: column; padding: 12px; position: relative; }
-  .code-top-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-family: 'Teko', sans-serif; font-size: 20px; color: #8b949e; }
-  .code-timer { color: #f85149; font-size: 22px; }
-  
-  .code-history { flex: 1; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 8px; }
-  .code-row { display: grid; grid-template-columns: 24px repeat(4, 1fr); gap: 6px; align-items: center; }
-  .code-row-num { font-size: 12px; color: #8b949e; font-family: monospace; text-align: right; padding-right: 4px; }
-  
-  .code-box { background: #131822; border: 1px solid #1f2937; border-radius: 4px; height: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
-  .code-box-digit { font-size: 16px; font-family: 'Teko', sans-serif; color: #fff; font-weight: bold; line-height: 1; }
-  .code-box-line { position: absolute; bottom: 2px; left: 4px; right: 4px; height: 2px; border-radius: 1px; background: #1f2937; }
-
-  .code-box.green .code-box-line { background: #2ea043; box-shadow: 0 0 5px #2ea043; }
-  .code-box.yellow .code-box-line { background: #db6d28; box-shadow: 0 0 5px #db6d28; }
-  .code-box.red .code-box-line { background: #f85149; box-shadow: 0 0 5px #f85149; }
-  .code-box.active .code-box-line { background: #e6edf3; }
-
-  .code-footer { font-size: 11px; color: #8b949e; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
-</style>
 </head>
 <body>
 
-  <a href="index.html" class="btn-back" id="btnBack">◄ POWRÓT</a>
-
-  <!-- MENU WYBORU ETAPU -->
-  <div class="menu-screen" id="menuScreen">
-    <div class="selection-title">BANK PINE</div>
-    <div style="font-size: 14px; color: #7d8590; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;">Solo Hack Simulator</div>
-    
-    <div class="stages-grid">
-      <div class="stage-card" onclick="startStage(1)">
-        <div class="stage-info">
-          <h3>ETAP 1: LAPTOP (Aimlab)</h3>
-          <p>Klikaj rosnące kropki zanim znikną na całym ekranie.</p>
-        </div>
-        <div class="stage-action">START</div>
-      </div>
-
-      <div class="stage-card" onclick="startStage(2)">
-        <div class="stage-info">
-          <h3>ETAP 2: ZAINFEKOWANY PENDRIVE</h3>
-          <p>Zgadnij 4-cyfrowy kod PIN (unikalne cyfry, system Wordle).</p>
-        </div>
-        <div class="stage-action">START</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- KONTENER MINIGR -->
-  <div class="game-container" id="gameContainer">
-    <div class="game-header">
-      <div class="game-title" id="gameTitle">ETAP 2</div>
-      <button class="btn-menu" onclick="returnToMenu()">WYBÓR ETAPÓW</button>
-    </div>
-    <div id="gameViewport"></div>
-  </div>
-
 <script>
-  function returnToMenu() {
+  // 1. Wstrzykiwanie stylów CSS przez JavaScript
+  const style = document.createElement('style');
+  style.innerHTML = `
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; background-image: radial-gradient(#1f2937 2px, transparent 2px); background-size: 25px 25px; }
+
+    @keyframes fadeScaleIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes scaleUpDot {
+      0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+    }
+
+    .btn-back { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; text-decoration: none; transition: 0.2s; z-index: 10; cursor: pointer; }
+    .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
+
+    /* MENU */
+    .menu-screen { text-align: center; max-width: 600px; width: 100%; padding: 20px; animation: fadeScaleIn 0.3s ease-out; z-index: 2; }
+    .selection-title { font-family: 'Teko', sans-serif; font-size: 48px; letter-spacing: 3px; color: #4dd8ff; text-shadow: 0 0 20px rgba(77,216,255,0.3); text-transform: uppercase; margin-bottom: 5px; }
+    .stages-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 25px; }
+    .stage-card { background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 20px; text-align: left; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .stage-card:hover { border-color: #4dd8ff; background: #1a2332; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(77,216,255,0.15); }
+    .stage-info h3 { font-family: 'Teko', sans-serif; font-size: 28px; color: #4dd8ff; line-height: 24px; }
+    .stage-info p { font-size: 13px; color: #8b949e; margin-top: 4px; }
+    .stage-action { font-family: 'Teko', sans-serif; font-size: 20px; background: #4dd8ff; color: #0b0f14; padding: 6px 16px; border-radius: 6px; font-weight: bold; }
+
+    /* KONTENER GŁÓWNY MINIGR */
+    .game-container { display: none; width: 100%; max-width: 600px; background: #131822; border: 2px solid #1f2937; border-radius: 12px; padding: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; animation: fadeScaleIn 0.3s ease-out; z-index: 2; }
+    .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
+    .game-title { font-family: 'Teko', sans-serif; font-size: 26px; color: #4dd8ff; text-transform: uppercase; }
+    .btn-menu { background: #21262d; border: 1px solid #1f2937; color: #fff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: 'Teko', sans-serif; font-size: 16px; transition: 0.2s; }
+    .btn-menu:hover { border-color: #4dd8ff; }
+
+    /* ETAP 1: AIMLAB (NA CAŁYM EKRANIE) */
+    .aim-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; pointer-events: none; z-index: 1; }
+    .aim-dot { position: absolute; width: 65px; height: 65px; border-radius: 50%; background: #4dd8ff; box-shadow: 0 0 25px #4dd8ff; cursor: pointer; transform: translate(-50%, -50%); animation: scaleUpDot 1.2s linear forwards; pointer-events: auto; }
+    .aim-hud { position: absolute; top: 25px; right: 30px; font-family: 'Teko', sans-serif; font-size: 32px; color: #4dd8ff; text-shadow: 0 0 10px rgba(77,216,255,0.4); pointer-events: none; z-index: 10; }
+    
+    .aim-btn-menu { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; cursor: pointer; transition: 0.2s; z-index: 20; pointer-events: auto; }
+    .aim-btn-menu:hover { background: #1a2332; border-color: #4dd8ff; }
+
+    /* ETAP 2: WORDLE PIN */
+    .code-screen { width: 100%; height: 420px; background: #0d1117; border: 1px solid #1f2937; border-radius: 8px; display: flex; flex-direction: column; padding: 12px; position: relative; }
+    .code-top-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-family: 'Teko', sans-serif; font-size: 20px; color: #8b949e; }
+    .code-timer { color: #f85149; font-size: 22px; }
+    
+    .code-history { flex: 1; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 8px; }
+    .code-row { display: grid; grid-template-columns: 24px repeat(4, 1fr); gap: 6px; align-items: center; }
+    .code-row-num { font-size: 12px; color: #8b949e; font-family: monospace; text-align: right; padding-right: 4px; }
+    
+    .code-box { background: #131822; border: 1px solid #1f2937; border-radius: 4px; height: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+    .code-box-digit { font-size: 16px; font-family: 'Teko', sans-serif; color: #fff; font-weight: bold; line-height: 1; }
+    .code-box-line { position: absolute; bottom: 2px; left: 4px; right: 4px; height: 2px; border-radius: 1px; background: #1f2937; }
+
+    .code-box.green .code-box-line { background: #2ea043; box-shadow: 0 0 5px #2ea043; }
+    .code-box.yellow .code-box-line { background: #db6d28; box-shadow: 0 0 5px #db6d28; }
+    .code-box.red .code-box-line { background: #f85149; box-shadow: 0 0 5px #f85149; }
+    .code-box.active .code-box-line { background: #e6edf3; }
+
+    .code-footer { font-size: 11px; color: #8b949e; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+  `;
+  document.head.appendChild(style);
+
+  // 2. Dynamiczne generowanie struktury HTML przez JavaScript
+  document.body.innerHTML = `
+    <a href="index.html" class="btn-back" id="btnBack">◄ POWRÓT</a>
+
+    <!-- MENU WYBORU ETAPU -->
+    <div class="menu-screen" id="menuScreen">
+      <div class="selection-title">BANK PINE</div>
+      <div style="font-size: 14px; color: #7d8590; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;">Solo Hack Simulator</div>
+      
+      <div class="stages-grid">
+        <div class="stage-card" id="stage1Card">
+          <div class="stage-info">
+            <h3>ETAP 1: LAPTOP (Aimlab)</h3>
+            <p>Klikaj rosnące kropki zanim znikną na całym ekranie.</p>
+          </div>
+          <div class="stage-action">START</div>
+        </div>
+
+        <div class="stage-card" id="stage2Card">
+          <div class="stage-info">
+            <h3>ETAP 2: ZAINFEKOWANY PENDRIVE</h3>
+            <p>Zgadnij 4-cyfrowy kod PIN (unikalne cyfry, system Wordle).</p>
+          </div>
+          <div class="stage-action">START</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KONTENER MINIGR -->
+    <div class="game-container" id="gameContainer">
+      <div class="game-header">
+        <div class="game-title" id="gameTitle">ETAP 2</div>
+        <button class="btn-menu" id="btnReturnMenu">WYBÓR ETAPÓW</button>
+      </div>
+      <div id="gameViewport"></div>
+    </div>
+  `;
+
+  // 3. Logika aplikacji
+  window.returnToMenu = function() {
     document.getElementById('gameContainer').style.display = 'none';
     document.getElementById('menuScreen').style.display = 'block';
     document.getElementById('btnBack').style.display = 'block';
@@ -119,7 +127,7 @@
     clearTimeout(aimTimer);
   }
 
-  function startStage(stageNum) {
+  window.startStage = function(stageNum) {
     document.getElementById('menuScreen').style.display = 'none';
     
     if(stageNum === 1) {
@@ -133,6 +141,11 @@
       initCodeHack();
     }
   }
+
+  // Przypisanie akcji kliknięć do przycisków
+  document.getElementById('stage1Card').addEventListener('click', () => startStage(1));
+  document.getElementById('stage2Card').addEventListener('click', () => startStage(2));
+  document.getElementById('btnReturnMenu').addEventListener('click', returnToMenu);
 
   /* ==========================================
      ETAP 1: AIMLAB (NA CAŁYM EKRANIE)
@@ -150,10 +163,11 @@
     aimScr.className = 'aim-screen';
     aimScr.id = 'aimScreenGlobal';
     aimScr.innerHTML = `
-      <button class="aim-btn-menu" onclick="returnToMenu()">WYBÓR ETAPÓW</button>
+      <button class="aim-btn-menu" id="aimBtnMenu">WYBÓR ETAPÓW</button>
       <div class="aim-hud" id="aimHud">Pozostało: ${aimPointsLeft}</div>
     `;
     document.body.appendChild(aimScr);
+    document.getElementById('aimBtnMenu').addEventListener('click', returnToMenu);
 
     spawnAimDot();
   }
@@ -183,12 +197,12 @@
     dot.style.left = `${x}px`;
     dot.style.top = `${y}px`;
 
-    dot.onmousedown = (e) => {
+    dot.addEventListener('mousedown', (e) => {
       e.stopPropagation();
       clearTimeout(aimTimer);
       aimPointsLeft--;
       spawnAimDot();
-    };
+    });
 
     aimScr.appendChild(dot);
 
@@ -210,7 +224,7 @@
   function initCodeHack() {
     document.getElementById('gameTitle').innerText = 'ETAP 2: PENDRIVE (KOD)';
     
-    let digitsPool = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    let digitsPool = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     secretCode = [];
     for(let i = 0; i < 4; i++) {
       let randIdx = Math.floor(Math.random() * digitsPool.length);
@@ -302,7 +316,7 @@
     if(!codeActive) return;
     if(document.getElementById('gameContainer').style.display !== 'block') return;
 
-    if(e.key >= '1' && e.key <= '9') {
+    if(e.key >= '0' && e.key <= '9') {
       if(currentAttemptInput.length < 4) {
         currentAttemptInput += e.key;
         renderCodeScreen();

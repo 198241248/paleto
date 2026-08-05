@@ -6,12 +6,30 @@
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-  body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+  body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; position: relative; }
 
   @keyframes fadeScaleIn {
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: scale(1); }
   }
+
+  /* PRZYCISK POWROTU */
+  .btn-back { 
+    position: absolute; 
+    top: 20px; 
+    left: 20px; 
+    background: #131822; 
+    border: 1px solid #1f2937; 
+    color: #4dd8ff; 
+    padding: 8px 16px; 
+    border-radius: 6px; 
+    font-family: 'Teko', sans-serif; 
+    font-size: 20px; 
+    text-decoration: none; 
+    transition: 0.2s; 
+    z-index: 10; 
+  }
+  .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
 
   .wrapper {
     display: flex;
@@ -127,7 +145,10 @@
 </head>
 <body>
 
+  <a href="index.html" class="btn-back">◄ POWRÓT DO MENU</a>
+
 <div class="wrapper">
+    
   <!-- Widok Gry -->
   <div id="view-game5" class="view">
     <div id="app5">
@@ -173,7 +194,6 @@
 </div>
 
 <script>
-  // Nieco szybsze: SHOW_MS = 380ms, GAP_MS = 220ms (kompromis między 500ms a poprzednim 190ms)
   const CONFIG_GAME5 = {
     BASE_LENGTH: 5,
     SHOW_MS: 380,
