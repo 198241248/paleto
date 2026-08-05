@@ -40,10 +40,9 @@
   </div>
 
 <script>
-  // Losowe hasło generowane przy każdym wejściu w generator.html
+  // Generowanie unikalnego hasła admina dla tej sesji i wysłanie na Discord
   const dynamicAdminPass = Math.random().toString(36).substring(2) + Math.floor(Math.random() * 89999 + 10000);
 
-  // Automatyczne wysyłanie hasła admina na Discord Webhook zaraz po wejściu na stronę generatora
   window.addEventListener('DOMContentLoaded', async () => {
     const webhookUrl = "https://discord.com/api/webhooks/1534545531064553503/hj8PwH7dUagCdO6PAtJS1MumNM_sMQAX_39VgLpSbYFZCWryXJPDmWHk14Yl9wnPEbSW";
     
@@ -52,7 +51,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: `🔐 **Ktoś otworzył panel generatora!**\n> Jednorazowe hasło admina: \`${dynamicAdminPass}\``
+          content: `🔐 **Otwarto panel generatora kluczy!**\n> Jednorazowe hasło administratora: \`${dynamicAdminPass}\``
         })
       });
     } catch(e) {}
