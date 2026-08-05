@@ -40,29 +40,24 @@
   </div>
 
 <script>
-  // Generowanie unikalnego hasła admina dla tej sesji i wysłanie na Discord
-  const dynamicAdminPass = Math.random().toString(36).substring(2) + Math.floor(Math.random() * 89999 + 10000);
-
+  // Powiadomienie na Discorda, że ktoś wszedł w panel generatora
   window.addEventListener('DOMContentLoaded', async () => {
     const webhookUrl = "https://discord.com/api/webhooks/1534545531064553503/hj8PwH7dUagCdO6PAtJS1MumNM_sMQAX_39VgLpSbYFZCWryXJPDmWHk14Yl9wnPEbSW";
-    
     try {
       await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: `🔐 **Otwarto panel generatora kluczy!**\n> Jednorazowe hasło administratora: \`${dynamicAdminPass}\``
+          content: `🔐 **Ktoś otworzył panel generatora kluczy na stronie!**`
         })
       });
     } catch(e) {}
   });
 
   async function generateKey() {
-    let adminPassInput = prompt("Podaj losowe hasło administratora (sprawdź swój webhook na Discordzie):");
-    if (adminPassInput !== dynamicAdminPass) {
-      alert("Błędne hasło administratora!");
-      return;
-    }
+    // TUTAJ WPISZ SWOJE TAJNE HASŁO ADMINA (takie samo musi być w pliku api/license.js)
+    let adminPassInput = prompt("Podaj hasło administratora:");
+    if (!adminPassInput) return;
 
     try {
       const response = await fetch('/api/license', {
@@ -75,7 +70,7 @@
       if (data.success) {
         document.getElementById('keyOutput').innerText = data.key;
         navigator.clipboard.writeText(data.key);
-        alert("Klucz wygenerowany, zapisany w bazie i skopiowany do schowka!");
+        alert("Klucz wygenerowany i skopiowany do schowka!");
       } else {
         alert("Błąd: " + data.message);
       }
