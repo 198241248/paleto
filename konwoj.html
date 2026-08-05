@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Symulator Hacków - MIL-KEY / VERIFY (Konwój)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+
+  @keyframes fadeScaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 900px;
+    padding: 20px;
+    animation: fadeScaleIn 0.3s ease-out;
+  }
+
+  /* Widok gry (view-game5) */
+  .view { display: block; width: 100%; max-width: 750px; }
+  #g5-wrap {
+    background: #131822;
+    border: 2px solid #4dd8ff;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 8px 32px rgba(77, 216, 255, 0.2);
+    display: flex;
+    gap: 30px;
+    position: relative;
+  }
+
+  #g5-left { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+  #g5-header { display: flex; align-items: center; gap: 12px; }
+  #g5-led { width: 12px; height: 12px; background: #4dd8ff; border-radius: 50%; box-shadow: 0 0 10px #4dd8ff; }
+  #g5-title { font-family: 'Teko', sans-serif; font-size: 32px; color: #4dd8ff; line-height: 1; }
+  #g5-subtitle { font-size: 12px; color: #8b949e; }
+
+  #g5-params { background: #0b0f14; border: 1px solid #1f2937; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+  .g5-row { display: flex; justify-content: space-between; font-size: 13px; }
+  .g5-row b { color: #4dd8ff; }
+
+  #g5-progress-bar-wrap { background: #1f2937; height: 6px; border-radius: 3px; overflow: hidden; margin: 4px 0; }
+  #g5-progress-bar { background: #4dd8ff; height: 100%; width: 0%; transition: width 0.2s ease; }
+
+  #g5-instr { font-size: 12px; color: #8b949e; line-height: 1.4; }
+  #g5-instr b { color: #e6edf3; }
+
+  #g5-right { flex: 1.2; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+  #g5-right-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 12px; }
+  #g5-right-title span { color: #4dd8ff; }
+  #g5-input-required { background: rgba(77,216,255,0.1); color: #4dd8ff; border: 1px solid #4dd8ff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+
+  /* Siatka 5x5 */
+  #g5-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    width: 100%;
+    aspect-ratio: 1;
+  }
+
+  .g5-cell {
+    background: #1f2937;
+    border: 2px solid #374151;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+  .g5-cell.g5-locked { cursor: not-allowed; }
+  .g5-cell.g5-show { background: #4dd8ff; border-color: #ffffff; box-shadow: 0 0 15px #4dd8ff; }
+  .g5-cell.g5-hit { background: #10b981; border-color: #34d399; box-shadow: 0 0 15px #10b981; }
+  .g5-cell.g5-fail { background: #ef4444; border-color: #f87171; box-shadow: 0 0 15px #ef4444; }
+
+  /* Komunikat etapu */
+  .g5-stage-notice {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 15, 20, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Teko', sans-serif;
+    font-size: 28px;
+    color: #4dd8ff;
+    letter-spacing: 2px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    border-radius: 8px;
+    text-align: center;
+    padding: 10px;
+  }
+  .g5-stage-notice.show { opacity: 1; }
+
+  /* Overlay (Wygrana / Przegrana) */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 15, 20, 0.85);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    text-align: center;
+    padding: 20px;
+  }
+  .overlay.show { display: flex; animation: fadeScaleIn 0.2s ease-out; }
+  .overlay h1 { font-family: 'Teko', sans-serif; font-size: 48px; letter-spacing: 2px; margin-bottom: 10px; }
+  .overlay h1.win { color: #5cff8a; text-shadow: 0 0 20px rgba(92,255,138,0.4); }
+  .overlay h1.lose { color: #ff4d4d; text-shadow: 0 0 20px rgba(255,77,77,0.4); }
+  .overlay p { font-size: 16px; color: #8b949e; margin-bottom: 20px; }
+  .overlay .hint { font-size: 14px; color: #4dd8ff; margin-bottom: 20px; }
+  .overlay button {
+    background: #4dd8ff; color: #0b0f14; border: none; font-family: 'Teko', sans-serif; font-size: 24px; padding: 10px 30px; border-radius: 6px; cursor: pointer; font-weight: bold; letter-spacing: 1px;
+  }
+  .overlay button:hover { background: #3bc2e6; }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+  <!-- Widok Gry -->
+  <div id="view-game5" class="view">
+    <div id="app5">
+      <div id="g5-wrap">
+        <div id="g5-left">
+          <div id="g5-header">
+            <span id="g5-led"></span>
+            <div>
+              <div id="g5-title">MIL-KEY / VERIFY</div>
+              <div id="g5-subtitle">Elektroniczna autoryzacja dostępu do skrzynki.</div>
+            </div>
+          </div>
+          <div id="g5-params">
+            <div class="g5-row"><span>Tryb</span><b id="g5-mode">SHOW</b></div>
+            <div class="g5-row"><span>Runda</span><b id="g5-round">1/3</b></div>
+            <div class="g5-row"><span>Postęp</span><b id="g5-progress-val">0%</b></div>
+            <div id="g5-progress-bar-wrap"><div id="g5-progress-bar"></div></div>
+            <div class="g5-row"><span>Czas</span><b id="g5-time">0.0s</b></div>
+            <div class="g5-row"><span>Typ skrzynki</span><b>STANDARD</b></div>
+          </div>
+          <div id="g5-instr">
+            <b>Instrukcja:</b>
+            System pokaże sekwencję aktywnych pól. Następnie musisz kliknąć je w tej samej kolejności. Błąd = natychmiastowa blokada (FAIL).
+          </div>
+        </div>
+        <div id="g5-right">
+          <div id="g5-right-header">
+            <div id="g5-right-title">Weryfikacja: <span>odtwórz sekwencję</span></div>
+            <div id="g5-input-required">INPUT REQUIRED</div>
+          </div>
+          <div id="g5-board"></div>
+          <div id="g5-stage-notice" class="g5-stage-notice"></div>
+        </div>
+      </div>
+    </div>
+    <div id="overlay5" class="overlay">
+      <h1 id="overlayTitle5"></h1>
+      <p id="overlaySub5"></p>
+      <div id="overlayHint5" class="hint" style="display:none;"></div>
+      <button id="restartBtn5">SPRÓBUJ PONOWNIE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Nieco szybsze: SHOW_MS = 380ms, GAP_MS = 220ms (kompromis między 500ms a poprzednim 190ms)
+  const CONFIG_GAME5 = {
+    BASE_LENGTH: 5,
+    SHOW_MS: 380,
+    GAP_MS: 220,
+    ROUNDS: [
+      { length: 5, timeMs: 6500, steps: [20, 40, 60, 80, 100] },
+      { length: 6, timeMs: 7500, steps: [17, 33, 50, 67, 83, 100] },
+      { length: 7, timeMs: 8500, steps: [14, 29, 43, 57, 71, 86, 100] }
+    ]
+  };
+
+  const TEXT_WIN = 'HACK ZAKOŃCZONY SUKCESEM';
+  const TEXT_LOSE = 'HACK ZABLOKOWANY';
+  const TEXT_HINT = 'Naciśnij SPACJĘ, aby rozpocząć.';
+  let currentView = 'view-game5';
+
+  let audioCtx = null;
+  function initAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+  }
+
+  function playTone(freq, duration, type='sine'){
+    try {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  function flashColor(color){
+    const wrap = document.getElementById('g5-wrap');
+    if(!wrap) return;
+    const prev = wrap.style.boxShadow;
+    wrap.style.boxShadow = `0 0 40px ${color}`;
+    setTimeout(()=>{ wrap.style.boxShadow = prev; }, 400);
+  }
+
+  const Game5 = (function(){
+    const board = document.getElementById('g5-board');
+    const modeEl = document.getElementById('g5-mode');
+    const roundEl = document.getElementById('g5-round');
+    const progressValEl = document.getElementById('g5-progress-val');
+    const progressBar = document.getElementById('g5-progress-bar');
+    const timeEl = document.getElementById('g5-time');
+    const overlay = document.getElementById('overlay5');
+    const overlayTitle = document.getElementById('overlayTitle5');
+    const overlaySub = document.getElementById('overlaySub5');
+    const overlayHint = document.getElementById('overlayHint5');
+    const restartBtn = document.getElementById('restartBtn5');
+
+    const CELL_COUNT = 25;
+    const cells = [];
+    for(let i=0;i<CELL_COUNT;i++){
+      const c = document.createElement('div');
+      c.className = 'g5-cell';
+      c.dataset.idx = i;
+      board.appendChild(c);
+      cells.push(c);
+    }
+
+    let roundIndex = 0;
+    let sequence = [];
+    let inputIndex = 0;
+    let mode = 'SHOW';
+    let locked = true;
+    let gameOver = false;
+    let waitingForSpace = false;
+    let waitingForRestart = false;
+    let showTimeouts = [];
+    let timerTotal = 0;
+    let timerStart = 0;
+    let timerRaf = null;
+
+    const TEXT_STAGE_FIRST = 'URUCHAMIANIE ZABEZPIECZEŃ';
+    const TEXT_STAGE_NEXT = 'ZACZYNANIE NOWEGO ETAPU';
+    const stageNoticeEl = document.getElementById('g5-stage-notice');
+    let pendingTimeouts = [];
+    function clearPendingTimeouts(){
+      pendingTimeouts.forEach(id => clearTimeout(id));
+      pendingTimeouts = [];
+    }
+    function showStageNotice(text, duration, cb){
+      stageNoticeEl.textContent = text;
+      stageNoticeEl.classList.add('show');
+      return setTimeout(()=>{
+        stageNoticeEl.classList.remove('show');
+        if(cb) cb();
+      }, duration);
+    }
+
+    let SHOW_MS = CONFIG_GAME5.SHOW_MS;
+    let GAP_MS  = CONFIG_GAME5.GAP_MS;
+    let activeRounds = CONFIG_GAME5.ROUNDS;
+
+    function currentRoundCfg(){ return activeRounds[roundIndex]; }
+
+    function updateHudStatic(){
+      roundEl.textContent = (roundIndex+1) + '/3';
+      modeEl.textContent = mode;
+    }
+    function setProgressPct(pct){
+      progressValEl.textContent = pct + '%';
+      progressBar.style.width = pct + '%';
+    }
+    function setTimeDisplay(sec){
+      timeEl.textContent = Math.max(0, sec).toFixed(1) + 's';
+    }
+    function clearShowTimeouts(){
+      showTimeouts.forEach(t=>clearTimeout(t));
+      showTimeouts = [];
+    }
+    function stopTimer(){
+      if(timerRaf) cancelAnimationFrame(timerRaf);
+      timerRaf = null;
+    }
+    function genSequence(len){
+      const arr = [];
+      for(let i=0;i<len;i++) arr.push(Math.floor(Math.random()*CELL_COUNT));
+      return arr;
+    }
+    function lockBoard(){
+      locked = true;
+      cells.forEach(c=>c.classList.add('g5-locked'));
+    }
+    function unlockBoard(){
+      locked = false;
+      cells.forEach(c=>c.classList.remove('g5-locked'));
+    }
+    function flashCellClass(cell, cls, holdMs){
+      cell.classList.add(cls);
+      return new Promise(res=>{
+        const t = setTimeout(()=>{ cell.classList.remove(cls); res(); }, holdMs);
+        showTimeouts.push(t);
+      });
+    }
+
+    function startRound(idx){
+      roundIndex = idx;
+      const cfg = currentRoundCfg();
+      sequence = genSequence(cfg.length);
+      inputIndex = 0;
+      mode = 'SHOW';
+      gameOver = false;
+      cells.forEach(c=> c.classList.remove('g5-show','g5-hit','g5-fail'));
+      lockBoard();
+      updateHudStatic();
+      setProgressPct(0);
+      setTimeDisplay(cfg.timeMs/1000);
+      playPresentation();
+    }
+
+    function playPresentation(){
+      clearShowTimeouts();
+      let i = 0;
+      function step(){
+        if(gameOver) return;
+        if(i >= sequence.length){
+          const t = setTimeout(()=>{ enterInputMode(); }, GAP_MS);
+          showTimeouts.push(t);
+          return;
+        }
+        const cellIdx = sequence[i];
+        const cell = cells[cellIdx];
+        playTone(520, 0.12, 'sine');
+        flashCellClass(cell, 'g5-show', SHOW_MS).then(()=>{
+          i++;
+          const t = setTimeout(step, GAP_MS);
+          showTimeouts.push(t);
+        });
+      }
+      step();
+    }
+
+    function enterInputMode(){
+      if(gameOver) return;
+      mode = 'INPUT';
+      updateHudStatic();
+      unlockBoard();
+      startTimer(currentRoundCfg().timeMs);
+    }
+
+    function startTimer(totalMs){
+      timerTotal = totalMs;
+      timerStart = performance.now();
+      stopTimer();
+      function tick(now){
+        if(gameOver) return;
+        const elapsed = now - timerStart;
+        const remaining = (timerTotal - elapsed) / 1000;
+        setTimeDisplay(remaining);
+        if(elapsed >= timerTotal){
+          failRound('Przekroczono limit czasu.');
+          return;
+        }
+        timerRaf = requestAnimationFrame(tick);
+      }
+      timerRaf = requestAnimationFrame(tick);
+    }
+
+    function handleCellClick(cellIdx){
+      if(locked || mode !== 'INPUT' || gameOver) return;
+      const cell = cells[cellIdx];
+      if(sequence[inputIndex] === cellIdx){
+        playTone(760, 0.08, 'square');
+        flashCellClass(cell, 'g5-hit', 220);
+        inputIndex++;
+        const cfg = currentRoundCfg();
+        setProgressPct(cfg.steps[inputIndex-1]);
+        if(inputIndex >= sequence.length) roundSuccess();
+      }else{
+        playTone(160, 0.28, 'sawtooth');
+        flashCellClass(cell, 'g5-fail', 320);
+        failRound('Nieprawidłowa sekwencja.');
+      }
+    }
+
+    function roundSuccess(){
+      locked = true;
+      stopTimer();
+      clearShowTimeouts();
+      if(roundIndex < activeRounds.length - 1){
+        const t = setTimeout(()=>{
+          pendingTimeouts.push(showStageNotice(TEXT_STAGE_NEXT, 1000, ()=>{
+            pendingTimeouts.push(setTimeout(()=> startRound(roundIndex+1), 250));
+          }));
+        }, 500);
+        pendingTimeouts.push(t);
+      }else{
+        winGame();
+      }
+    }
+
+    function failRound(reason){
+      if(gameOver) return;
+      gameOver = true;
+      lockBoard();
+      stopTimer();
+      clearShowTimeouts();
+      clearPendingTimeouts();
+      stageNoticeEl.classList.remove('show');
+      flashColor('rgba(255,77,77,0.35)');
+      playTone(140, 0.35, 'sawtooth');
+      showLose(reason);
+    }
+
+    function winGame(){
+      gameOver = true;
+      lockBoard();
+      stopTimer();
+      cells.forEach(c=> c.classList.remove('g5-show','g5-hit','g5-fail'));
+      flashColor('rgba(92,255,138,0.3)');
+      playTone(880, 0.3, 'sine');
+      showWin();
+    }
+
+    function showLose(reason){
+      overlay.classList.add('show');
+      overlayTitle.className = 'lose';
+      overlayTitle.textContent = TEXT_LOSE;
+      overlaySub.textContent = reason || '';
+      overlayHint.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      waitingForRestart = true;
+    }
+    function showWin(){
+      overlay.classList.add('show');
+      overlayTitle.className = 'win';
+      overlayTitle.textContent = TEXT_WIN;
+      overlaySub.textContent = 'Sekwencja zweryfikowana pomyślnie.';
+      overlayHint.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      waitingForRestart = true;
+    }
+    function showSpacePrompt(){
+      overlay.classList.add('show');
+      overlayTitle.className = '';
+      overlayTitle.textContent = 'MIL-KEY / VERIFY';
+      overlaySub.textContent = 'Terminal autoryzacji dostępu.';
+      overlayHint.style.display = 'block';
+      overlayHint.textContent = TEXT_HINT;
+      restartBtn.style.display = 'none';
+      waitingForSpace = true;
+    }
+
+    function goToStartScreen(){
+      waitingForRestart = false;
+      gameOver = false;
+      clearShowTimeouts();
+      clearPendingTimeouts();
+      stageNoticeEl.classList.remove('show');
+      stopTimer();
+      lockBoard();
+      cells.forEach(c=> c.classList.remove('g5-show','g5-hit','g5-fail'));
+      roundIndex = 0;
+      sequence = [];
+      inputIndex = 0;
+      mode = 'SHOW';
+      updateHudStatic();
+      setProgressPct(0);
+      setTimeDisplay(activeRounds[0].timeMs/1000);
+      overlay.classList.remove('show');
+      showSpacePrompt();
+    }
+
+    function stop(){
+      clearShowTimeouts();
+      clearPendingTimeouts();
+      stageNoticeEl.classList.remove('show');
+      stopTimer();
+      gameOver = true;
+      waitingForSpace = false;
+      waitingForRestart = false;
+      overlay.classList.remove('show');
+    }
+
+    board.addEventListener('click', (e)=>{
+      const target = e.target.closest('.g5-cell');
+      if(!target) return;
+      handleCellClick(parseInt(target.dataset.idx, 10));
+    });
+
+    restartBtn.addEventListener('click', goToStartScreen);
+
+    window.addEventListener('keydown', (e)=>{
+      if(currentView !== 'view-game5') return;
+      const isSpace = (e.code === 'Space' || e.key === ' ');
+      if(!isSpace) return;
+      if(waitingForSpace){
+        e.preventDefault(); waitingForSpace = false; overlay.classList.remove('show');
+        pendingTimeouts.push(showStageNotice(TEXT_STAGE_FIRST, 500, ()=>{
+          pendingTimeouts.push(setTimeout(()=> startRound(0), 250));
+        }));
+        return;
+      }
+      if(waitingForRestart){ e.preventDefault(); goToStartScreen(); return; }
+    });
+
+    return { goToStartScreen, stop, isWaitingForSpace: ()=> waitingForSpace };
+  })();
+
+  window.addEventListener('DOMContentLoaded', () => {
+    Game5.goToStartScreen();
+  });
+</script>
+
+</body>
+</html>
