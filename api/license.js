@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
     const randomPart1 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const newKey = `PALETO-${randomPart1}-${randomPart2}`;
+    const newKey = `PALETO-${randomPart1}-${randomPart2}`; 
     
     global.activeKeys.push(newKey);
 
