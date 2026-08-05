@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Sekwencja Paleto - Hacking Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+
+  @keyframes fadeScaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* PRZYCISK POWROTU */
+  .btn-back { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; text-decoration: none; transition: 0.2s; }
+  .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
+
+  /* EKRAN GRY */
+  .bomb-frame { width: 680px; height: 460px; background: #131822; border: 2px solid #1f2937; border-radius: 10px; padding: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; animation: fadeScaleIn 0.3s ease-out; }
+  .header-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding: 0 5px; }
+  .sys-title { font-size: 11px; font-weight: bold; color: #7d8590; letter-spacing: 1px; }
+  .mod-title { font-family: 'Teko', sans-serif; font-size: 34px; color: #4dd8ff; letter-spacing: 1px; line-height: 30px; text-transform: uppercase; }
+
+  .inner-screen { width: 100%; height: 360px; background: #0d1117; border: 1px solid #1f2937; border-radius: 6px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: radial-gradient(#1f2937 1.5px, transparent 1.5px); background-size: 18px 18px; padding: 10px; overflow: hidden; }
+
+  /* SEKWENCJA PALETO */
+  .seq-row { display: flex; flex-direction: row; gap: 10px; justify-content: center; align-items: center; margin-top: 25px; }
+  .seq-btn { 
+    width: 58px; 
+    height: 64px; 
+    background: #131822; 
+    border: 1px solid #1f2937; 
+    border-radius: 8px; 
+    font-family: 'Teko', sans-serif; 
+    font-size: 38px; 
+    color: #485361; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .seq-btn.active-green { 
+    background: #1c4e6b !important; 
+    border-color: #4dd8ff !important; 
+    color: #ffffff !important; 
+    box-shadow: 0 0 15px rgba(77, 216, 255, 0.5); 
+  }
+</style>
+</head>
+<body>
+
+  <a href="index.html" class="btn-back">◄ POWRÓT DO MENU</a>
+
+  <div class="bomb-frame">
+    <div class="header-bar">
+      <div>
+        <div class="sys-title">PALETO SYSTEM BEZPIECZEŃSTWA</div>
+        <div class="mod-title">SEKWENCJA PALETO</div>
+      </div>
+    </div>
+    <div class="inner-screen" id="innerScreen">
+      <div style="text-align:center;">
+        <div style="font-size:14px; color:#0fc1e0; font-weight:bold; margin-bottom:10px; letter-spacing:1px;">
+          WCISKAJ PODŚWIETLONĄ CYFRĘ NA KLAWIATURZE | CZAS: 2 SEKUNDY
+        </div>
+        <div class="seq-row" id="seqRowContainer"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let gameState = {
+    seqLayout: [],
+    seqCurrentIdx: 0
+  };
+  let seqClickTimer = null;
+
+  // Inicjalizacja gry po załadowaniu podstrony
+  function initSequence() {
+    let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    gameState.seqLayout = numbers.sort(() => 0.5 - Math.random());
+    gameState.seqCurrentIdx = 0;
+    renderSequence();
+    startSeqClickTimer();
+  }
+
+  function startSeqClickTimer() {
+    clearTimeout(seqClickTimer);
+    seqClickTimer = setTimeout(() => {
+      alert("BŁĄD! Czas upłynął (2 sekundy)!");
+      initSequence();
+    }, 2000);
+  }
+
+  // Obsługa klawiatury
+  window.addEventListener('keydown', (e) => {
+    if ("123456789".includes(e.key)) {
+      verifySeqClick(parseInt(e.key));
+    }
+  });
+
+  function verifySeqClick(val) {
+    const expectedVal = gameState.seqLayout[gameState.seqCurrentIdx];
+
+    if (val === expectedVal) {
+      clearTimeout(seqClickTimer);
+      gameState.seqCurrentIdx++;
+
+      if (gameState.seqCurrentIdx >= gameState.seqLayout.length) {
+        alert("SUKCES! Sekwencja ukończona pomyślnie!");
+        initSequence();
+        return;
+      }
+
+      startSeqClickTimer();
+      renderSequence();
+    } else {
+      clearTimeout(seqClickTimer);
+      alert("BŁĄD! Zła cyfra z klawiatury!");
+      initSequence();
+    }
+  }
+
+  function renderSequence() {
+    let rowHtml = '';
+    for(let i = 0; i < gameState.seqLayout.length; i++) {
+      let num = gameState.seqLayout[i];
+      let isActive = (i === gameState.seqCurrentIdx) ? 'active-green' : '';
+      rowHtml += `<div class="seq-btn ${isActive}">${num}</div>`;
+    }
+    document.getElementById('seqRowContainer').innerHTML = rowHtml;
+  }
+
+  // Uruchomienie skryptu po załadowaniu
+  window.onload = initSequence;
+</script>
+
+</body>
+</html>

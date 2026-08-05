@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Villa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+
+    /* Widoki systemowe */
+    .view { display: none; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: center; background: #0b0f14; z-index: 1; }
+    .view.active { display: flex; z-index: 5; }
+
+    /* Menu wyboru etapów */
+    #view-menu { flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+    .menu-title { font-size: 32px; font-weight: 700; color: #4dd8ff; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+    .menu-subtitle { font-size: 14px; color: #8b949e; letter-spacing: 1px; margin-bottom: 25px; text-transform: uppercase; }
+    
+    .stage-card { width: 680px; background: #131822; border: 1px solid #1f2937; border-radius: 12px; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); transition: border-color 0.2s; }
+    .stage-card:hover { border-color: #4dd8ff; }
+    .stage-info h3 { font-size: 20px; color: #4dd8ff; margin-bottom: 4px; }
+    .stage-info p { font-size: 13px; color: #8b949e; }
+    .start-btn { background: #4dd8ff; color: #0b0f14; border: none; padding: 10px 28px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+    .start-btn:hover { background: #3ab1cc; }
+
+    .back-menu-link { position: absolute; top: 25px; left: 30px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; z-index: 10; font-weight: 500; }
+    .back-menu-link:hover { background: #1a2332; }
+
+    /* ================================================================
+       STYL OKNA GRY 1 (DOKŁADNIE JAK NA SCREENIE)
+       ================================================================ */
+    .g12-window {
+      background: #0f141d;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 24px;
+      width: 720px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .g12-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .g12-header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      color: #e6edf3;
+    }
+
+    .g12-timer-box {
+      background: #131822;
+      border: 1px solid #1f2937;
+      padding: 6px 14px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #4dd8ff;
+    }
+
+    .g12-close-btn {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .g12-close-btn:hover { color: #fff; background: #1f2937; }
+
+    #g12-board {
+      display: grid;
+      grid-template-columns: repeat(10, 52px);
+      grid-template-rows: repeat(7, 52px);
+      gap: 6px;
+      margin: 0 auto 20px auto;
+    }
+
+    .tile {
+      background: #131822;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+      width: 52px;
+      height: 52px;
+    }
+    .tile:hover { background: #1a2332; border-color: #2b3b52; }
+    .tile.selected { border-color: #ff4d4d; box-shadow: 0 0 8px rgba(255,77,77,0.4); }
+    .tile.obstacle { background: #0b0f14; border-color: #161b22; background-image: repeating-linear-gradient(45deg, #10151f 0, #10151f 4px, #0b0f14 4px, #0b0f14 8px); cursor: default; }
+    .tile.start-node { border-color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.4); }
+    .tile.meta-node { border-color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.4); }
+
+    .g12-legend {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      border-top: 1px solid #1f2937;
+      padding-top: 16px;
+      font-size: 12px;
+      color: #8b949e;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* GRA 2: SPIRALA */
+    #g13-canvas-wrap { position: relative; width: 600px; height: 600px; background: #0f141d; border: 1px solid #1f2937; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.8); overflow: hidden; cursor: crosshair; }
+    #g13-canvas { display: block; width: 100%; height: 100%; }
+
+    /* Overlay komunikatów */
+    .overlay { position: absolute; inset: 0; background: rgba(11, 15, 20, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; border-radius: inherit; }
+    .overlay.show { opacity: 1; pointer-events: auto; }
+    .overlay h1 { font-size: 32px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+    .overlay h1.win { color: #2ecc71; }
+    .overlay h1.lose { color: #ff4d4d; }
+    .overlay p { font-size: 14px; color: #8b949e; margin-bottom: 20px; text-align: center; max-width: 400px; }
+    .overlay button { background: #4dd8ff; color: #0b0f14; border: none; padding: 10px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .overlay button:hover { background: #3ab1cc; }
+  </style>
+</head>
+<body>
+
+  <!-- ============ MENU ============ -->
+  <div id="view-menu" class="view active">
+    <a href="index.html" class="back-menu-link">← MENU GŁÓWNE</a>
+    <div class="menu-title">VILLA / OPERACJA HAKERSKA</div>
+    <div class="menu-subtitle">Wybierz etap zabezpieczeń</div>
+
+    <div class="stage-card">
+      <div class="stage-info">
+        <h3>ETAP 1: KAFELKI</h3>
+        <p>Obracaj segmenty, połącz start z metą przed upływem czasu.</p>
+      </div>
+      <button class="start-btn" onclick="switchView('view-game12')">START</button>
+    </div>
+
+    <div class="stage-card">
+      <div class="stage-info">
+        <h3>ETAP 2: SPIRALA</h3>
+        <p>Poprowadź kursorem kuleczkę po torze i przepisz znaki.</p>
+      </div>
+      <button class="start-btn" onclick="switchView('view-game13')">START</button>
+    </div>
+  </div>
+
+  <!-- ============ ETAP 1 (SIECIE - WYGLĄD JAK NA SCREENIE) ============ -->
+  <div id="view-game12" class="view">
+    <div class="g12-window">
+      <div class="g12-header">
+        <div class="g12-header-title">
+          <span>🔒</span> Otwórz przejście
+        </div>
+        <div class="g12-timer-box">
+          <span>⏱</span> <span id="g12-timer-val">24</span> s
+        </div>
+        <button class="g12-close-btn" onclick="returnToMenu()">✕</button>
+      </div>
+
+      <div id="g12-board"></div>
+
+      <div class="g12-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#2ecc71"></div> Start</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff4d4d"></div> Meta</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#161b22; border:1px solid #30363d"></div> Przeszkoda</div>
+      </div>
+
+      <div id="overlay12" class="overlay">
+        <h1 id="overlayTitle12"></h1>
+        <p id="overlaySub12"></p>
+        <div id="overlayHint12" style="font-size:16px; color:#4dd8ff; margin-bottom:15px; display:none;">Naciśnij SPACJĘ aby wystartować</div>
+        <div id="overlayCountdown12" style="font-size:36px; color:#4dd8ff; display:none;">1</div>
+        <button id="restartBtn12">SPRÓBUJ PONOWNIE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ETAP 2 (SPIRALA) ============ -->
+  <div id="view-game13" class="view">
+    <div style="position: absolute; top: 20px; left: 20px; z-index: 10;">
+      <button class="start-btn" onclick="returnToMenu()" style="background:#131822; color:#4dd8ff; border:1px solid #1f2937;">← MENU</button>
+    </div>
+    <div id="g13-canvas-wrap">
+      <canvas id="g13-canvas"></canvas>
+      <div id="overlay13" class="overlay">
+        <h1 id="overlayTitle13"></h1>
+        <p id="overlaySub13"></p>
+        <div id="overlayHint13" style="font-size:16px; color:#4dd8ff; margin-bottom:15px; display:none;">Naciśnij SPACJĘ aby wystartować</div>
+        <div id="overlayCountdown13" style="font-size:36px; color:#4dd8ff; display:none;">1</div>
+        <button id="restartBtn13">SPRÓBUJ PONOWNIE</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function playTone(freq, duration, type='sine') {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function switchView(viewId) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+      if(viewId === 'view-game12') Game12.goToStartScreen();
+      else if(viewId === 'view-game13') Game13.goToStartScreen();
+    }
+
+    function returnToMenu() {
+      Game12.stop(); Game13.stop();
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-menu').classList.add('active');
+    }
+
+    // ================================================================
+    //  ETAP 1 (SIEĆ — SIATKA 10x7 ZGODNA ZE SCREENEM)
+    // ================================================================
+    const Game12 = (function(){
+      const overlay = document.getElementById('overlay12');
+      const overlayTitle = document.getElementById('overlayTitle12');
+      const overlaySub = document.getElementById('overlaySub12');
+      const overlayHint = document.getElementById('overlayHint12');
+      const overlayCountdown = document.getElementById('overlayCountdown12');
+      const restartBtn = document.getElementById('restartBtn12');
+      const boardEl = document.getElementById('g12-board');
+      const timerValEl = document.getElementById('g12-timer-val');
+
+      const COLS = 10, ROWS = 7;
+      let TIME_SEC = 24;
+      let cells = [];
+      let startIdx = 0, metaIdx = 69;
+      let gameOver = false, roundRunning = false;
+      let waitingForSpace = false, waitingForRestart = false;
+      let timeLeft = 0, timerInterval = null;
+
+      const OPP = {0:2, 1:3, 2:0, 3:1};
+      function idxOf(r, c){ return r * COLS + c; }
+      function rowOf(i){ return Math.floor(i / COLS); }
+      function colOf(i){ return i % COLS; }
+
+      function neighbor(i, d){
+        const r = rowOf(i), c = colOf(i);
+        if(d === 0 && r > 0) return idxOf(r - 1, c);
+        if(d === 1 && c < COLS - 1) return idxOf(r, c + 1);
+        if(d === 2 && r < ROWS - 1) return idxOf(r + 1, c);
+        if(d === 3 && c > 0) return idxOf(r, c - 1);
+        return -1;
+      }
+
+      const L_EXITS = [[0,1], [1,2], [2,3], [3,0]];
+      function getExits(type, rot){
+        if(type === 'straight') return (rot % 2 === 0) ? [0,2] : [1,3];
+        if(type === 'L') return L_EXITS[rot % 4];
+        return [];
+      }
+
+      function canConnect(iA, iB){
+        const cA = cells[iA], cB = cells[iB];
+        if(!cA || !cB || cA.type === 'obstacle' || cB.type === 'obstacle') return false;
+        let dir = -1;
+        for(let d = 0; d < 4; d++){ if(neighbor(iA, d) === iB){ dir = d; break; } }
+        if(dir === -1) return false;
+        return getExits(cA.type, cA.rot).includes(dir) && getExits(cB.type, cB.rot).includes(OPP[dir]);
+      }
+
+      function checkWin(){
+        const vis = new Set([startIdx]);
+        const q = [startIdx];
+        while(q.length){
+          const cur = q.shift();
+          if(cur === metaIdx) return true;
+          for(let d = 0; d < 4; d++){
+            const nb = neighbor(cur, d);
+            if(nb !== -1 && !vis.has(nb) && canConnect(cur, nb)){ vis.add(nb); q.push(nb); }
+          }
+        }
+        return false;
+      }
+
+      function drawCell(i){
+        const cell = cells[i];
+        const svg = cell.svgEl;
+        if(!svg) return;
+        svg.innerHTML = '';
+        if(cell.type === 'obstacle') return;
+        
+        const S = 52, cx = S / 2, cy = S / 2, reach = S * 0.38;
+        const eps = {0: [cx, cy - reach], 1: [cx + reach, cy], 2: [cx, cy + reach], 3: [cx - reach, cy]};
+        const stroke = '#4dd8ff';
+        const glow = 'rgba(77,216,255,0.5)';
+        
+        getExits(cell.type, cell.rot).forEach(d => {
+          const [ex, ey] = eps[d];
+          const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          ln.setAttribute('x1', cx); ln.setAttribute('y1', cy); ln.setAttribute('x2', ex); ln.setAttribute('y2', ey);
+          ln.setAttribute('stroke', stroke); ln.setAttribute('stroke-width', '5'); ln.setAttribute('stroke-linecap', 'round');
+          ln.style.filter = 'drop-shadow(0 0 3px ' + glow + ')';
+          svg.appendChild(ln);
+        });
+        
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('cx', cx); dot.setAttribute('cy', cy); dot.setAttribute('r', '3.5');
+        dot.setAttribute('fill', stroke);
+        svg.appendChild(dot);
+      }
+
+      function updateConnectedVisuals(){ cells.forEach((_, i) => drawCell(i)); }
+
+      function rotateTile(i){
+        if(gameOver || !roundRunning) return;
+        if(i === startIdx || i === metaIdx) return;
+        const cell = cells[i];
+        if(cell.type === 'obstacle') return;
+        cell.rot = (cell.rot + 1) % 4;
+        playTone(660, 0.04, 'sine');
+        updateConnectedVisuals();
+        if(checkWin()) winGame();
+      }
+
+      function loadRandomBoard(){
+        cells = [];
+        startIdx = 0;
+        metaIdx = COLS * ROWS - 1;
+
+        for(let i = 0; i < COLS * ROWS; i++){
+          if(i === startIdx || i === metaIdx){
+            cells.push({ type: 'straight', rot: 0, el: null, svgEl: null });
+            continue;
+          }
+          let isObstacle = Math.random() < 0.15;
+          let type = isObstacle ? 'obstacle' : (Math.random() > 0.4 ? 'straight' : 'L');
+          let rot = Math.floor(Math.random() * 4);
+          cells.push({ type, rot, el: null, svgEl: null });
+        }
+      }
+
+      function buildBoard(){
+        boardEl.innerHTML = '';
+        cells.forEach((cell, i) => {
+          const el = document.createElement('div');
+          el.className = 'tile';
+          if(cell.type === 'obstacle') el.classList.add('obstacle');
+          if(i === startIdx) { el.classList.add('start-node'); el.style.borderColor = '#2ecc71'; }
+          if(i === metaIdx) { el.classList.add('meta-node'); el.style.borderColor = '#ff4d4d'; }
+          
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', '0 0 52 52');
+          svg.setAttribute('width', '52'); svg.setAttribute('height', '52');
+          el.appendChild(svg);
+          
+          cell.el = el; cell.svgEl = svg;
+          
+          if(i !== startIdx && i !== metaIdx && cell.type !== 'obstacle'){
+            el.addEventListener('click', () => rotateTile(i));
+          }
+          boardEl.appendChild(el);
+        });
+        updateConnectedVisuals();
+      }
+
+      function updateTimer(){
+        timerValEl.textContent = timeLeft;
+      }
+
+      function failGame(reason){
+        if(gameOver) return;
+        gameOver = true; roundRunning = false; clearInterval(timerInterval);
+        playTone(140, 0.3, 'sawtooth');
+        overlayHint.style.display = 'none'; overlayCountdown.style.display = 'none';
+        restartBtn.style.display = 'inline-block';
+        overlayTitle.textContent = 'UTRACONO POŁĄCZENIE'; overlayTitle.className = 'lose';
+        overlaySub.textContent = reason;
+        overlay.classList.add('show'); waitingForRestart = true;
+      }
+
+      function winGame(){
+        if(gameOver) return;
+        gameOver = true; roundRunning = false; clearInterval(timerInterval);
+        playTone(660, 0.12, 'sine'); setTimeout(() => playTone(990, 0.15, 'sine'), 120);
+        overlayHint.style.display = 'none'; overlayCountdown.style.display = 'none';
+        restartBtn.style.display = 'inline-block';
+        overlayTitle.textContent = 'SYSTEM ZAHAKOWANY'; overlayTitle.className = 'win';
+        overlaySub.textContent = 'Przejście otwarte! Czas: ' + timeLeft + 's';
+        overlay.classList.add('show'); waitingForRestart = true;
+      }
+
+      function beginRound(){
+        roundRunning = true; gameOver = false; timeLeft = TIME_SEC; updateTimer();
+        timerInterval = setInterval(() => {
+          if(!roundRunning) return;
+          timeLeft--; updateTimer();
+          if(timeLeft <= 0) failGame('Czas minął!');
+        }, 1000);
+      }
+
+      function prepareRound(){
+        clearInterval(timerInterval);
+        gameOver = false; roundRunning = false; timeLeft = TIME_SEC;
+        updateTimer(); loadRandomBoard(); buildBoard();
+      }
+
+      function showSpacePrompt(){
+        overlayTitle.textContent = ''; overlaySub.textContent = '';
+        overlayHint.textContent = 'Naciśnij SPACJĘ aby wystartować'; overlayHint.style.display = 'block';
+        overlayCountdown.style.display = 'none'; restartBtn.style.display = 'none';
+        overlay.classList.add('show'); waitingForSpace = true;
+      }
+
+      function startCountdownThenBegin(){
+        waitingForSpace = false;
+        overlayHint.style.display = 'none'; overlayCountdown.style.display = 'block';
+        overlayCountdown.textContent = '1';
+        setTimeout(() => { overlay.classList.remove('show'); beginRound(); }, 1000);
+      }
+
+      function goToStartScreen(){ waitingForRestart = false; prepareRound(); showSpacePrompt(); }
+      function stop(){ clearInterval(timerInterval); gameOver = true; roundRunning = false; waitingForSpace = false; waitingForRestart = false; overlay.classList.remove('show'); }
+
+      restartBtn.addEventListener('click', goToStartScreen);
+
+      window.addEventListener('keydown', (e) => {
+        if(!document.getElementById('view-game12').classList.contains('active')) return;
+        if((waitingForSpace || waitingForRestart) && (e.code === 'Space' || e.key === ' ')){
+          e.preventDefault();
+          if(waitingForSpace) startCountdownThenBegin(); else goToStartScreen();
+        }
+      });
+
+      return { goToStartScreen, stop };
+    })();
+
+    // ================================================================
+    //  ETAP 2 (SPIRALA)
+    // ================================================================
+    const Game13 = (function(){
+      const overlay = document.getElementById('overlay13');
+      const overlayTitle = document.getElementById('overlayTitle13');
+      const overlaySub = document.getElementById('overlaySub13');
+      const overlayHint = document.getElementById('overlayHint13');
+      const overlayCountdown = document.getElementById('overlayCountdown13');
+      const restartBtn = document.getElementById('restartBtn13');
+      const wrapEl = document.getElementById('g13-canvas-wrap');
+      const canvasEl = document.getElementById('g13-canvas');
+      const ctx = canvasEl.getContext('2d');
+
+      let LOOPS = 6, SPACING = 22, TRACK_WIDTH = 42, PLAYER_SPEED = 140, ENEMY_SPEED = 110, CHECKPOINT_COUNT = 8;
+      const CHECKPOINT_RADIUS = 15;
+      const SYMBOLS = ['A', 'S', 'D', 'F', 'J', 'K', 'L', 'W'];
+      let cssW = 600, cssH = 600, dpr = 1, samples = [], totalArcLen = 0, trackWidthEff = TRACK_WIDTH, halfWidthEff = TRACK_WIDTH/2;
+      let checkpoints = [], arcProgress = 0, ballX = 0, ballY = 0, ballAngle = 0, speedMul = 1;
+      let enemyArc = 0, enemyStartDelay = 3, boostTimer = 0, mouseX = 300, mouseY = 300;
+      let roundStartTime = 0, gameOver = false, roundRunning = false, waitingForSpace = false, waitingForRestart = false, rafId = null, lastTs = 0;
+
+      function resizeCanvas(){
+        const rect = wrapEl.getBoundingClientRect();
+        cssW = Math.max(1, rect.width); cssH = Math.max(1, rect.height);
+        dpr = window.devicePixelRatio || 1;
+        canvasEl.width = Math.round(cssW*dpr); canvasEl.height = Math.round(cssH*dpr);
+        canvasEl.style.width = cssW+'px'; canvasEl.style.height = cssH+'px';
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+      }
+
+      function buildSpiral(){
+        const availableR = Math.min(cssW,cssH)/2 - 20;
+        const spacingEff = Math.min(SPACING, availableR/LOOPS);
+        trackWidthEff = Math.max(10, TRACK_WIDTH * (spacingEff/SPACING));
+        halfWidthEff = trackWidthEff/2;
+        const cx = cssW/2, cy = cssH/2, b = spacingEff/(2*Math.PI), totalTheta = LOOPS*2*Math.PI, R0 = spacingEff*LOOPS;
+
+        samples = [];
+        let cumArc = 0, prevX=null, prevY=null;
+        for(let i=0;i<=2000;i++){
+          const theta = (i/2000)*totalTheta, r = R0 - b*theta;
+          const x = cx + r*Math.cos(theta), y = cy + r*Math.sin(theta);
+          if(prevX!==null) cumArc += Math.hypot(x-prevX,y-prevY);
+          samples.push({theta,r,x,y,arcLen:cumArc});
+          prevX=x; prevY=y;
+        }
+        totalArcLen = cumArc;
+      }
+
+      function pointAtArcForward(arcLen){
+        arcLen = Math.max(0, Math.min(arcLen, totalArcLen));
+        let idx = 0;
+        for(let i=0; i<samples.length; i++){ if(samples[i].arcLen >= arcLen){ idx = i; break; } }
+        const s = samples[idx];
+        return { x: s.x, y: s.y };
+      }
+
+      function goToStartScreen(){
+        waitingForRestart = false; resizeCanvas(); buildSpiral();
+        checkpoints = [];
+        arcProgress = 0; ballX = cssW/2; ballY = cssH/2;
+        overlayHint.textContent = 'Naciśnij SPACJĘ aby wystartować';
+        overlayHint.style.display = 'block'; overlayCountdown.style.display = 'none'; restartBtn.style.display = 'none';
+        overlay.classList.add('show'); waitingForSpace = true;
+      }
+
+      function stop(){ cancelAnimationFrame(rafId); gameOver = true; roundRunning = false; waitingForSpace = false; waitingForRestart = false; overlay.classList.remove('show'); }
+
+      wrapEl.addEventListener('mousemove', (e) => {
+        const rect = wrapEl.getBoundingClientRect();
+        mouseX = e.clientX - rect.left; mouseY = e.clientY - rect.top;
+      });
+
+      restartBtn.addEventListener('click', goToStartScreen);
+
+      window.addEventListener('keydown', (e) => {
+        if(!document.getElementById('view-game13').classList.contains('active')) return;
+        if(waitingForSpace && (e.code === 'Space' || e.key === ' ')){
+          e.preventDefault(); waitingForSpace = false;
+          overlayHint.style.display = 'none'; overlayCountdown.style.display = 'block'; overlayCountdown.textContent = '1';
+          setTimeout(() => { overlay.classList.remove('show'); roundRunning = true; roundStartTime = Date.now(); lastTs = performance.now(); }, 1000);
+        }
+        if(waitingForRestart && (e.code === 'Space' || e.key === ' ')){ e.preventDefault(); goToStartScreen(); }
+      });
+
+      return { goToStartScreen, stop };
+    })();
+  </script>
+</body>
+</html>

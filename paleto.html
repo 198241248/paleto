@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Bank Paleto - Hacking Simulator</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+
+  @keyframes fadeScaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes timerPulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+  }
+
+  /* PRZYCISK POWROTU */
+  .btn-back { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; text-decoration: none; transition: 0.2s; z-index: 10; }
+  .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
+
+  /* LOBBY / KONFIGURACJA */
+  .lobby-screen { text-align: center; max-width: 500px; width: 100%; padding: 20px; animation: fadeScaleIn 0.3s ease-out; }
+  .selection-title { font-family: 'Teko', sans-serif; font-size: 48px; letter-spacing: 3px; color: #4dd8ff; text-shadow: 0 0 20px rgba(77,216,255,0.3); text-transform: uppercase; margin-bottom: 5px; }
+  .lobby-box { background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 25px; width: 100%; margin-top: 15px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .lobby-box input, .lobby-box select { width: 100%; padding: 12px; margin: 8px 0 16px 0; background: #0d1117; border: 1px solid #1f2937; color: #fff; border-radius: 6px; font-size: 15px; }
+  .lobby-box input:focus, .lobby-box select:focus { border-color: #4dd8ff; outline: none; }
+  .btn-start { width: 100%; padding: 14px; background: #4dd8ff; border: none; color: #0b0f14; font-family: 'Teko', sans-serif; font-size: 24px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: bold; }
+  .btn-start:hover { background: #3ab1cc; }
+
+  /* SYSTEM GOTOWOŚCI */
+  .ready-screen { display: none; width: 100%; max-width: 500px; background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 25px; text-align: center; animation: fadeScaleIn 0.3s ease-out; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .ready-title { font-family: 'Teko', sans-serif; font-size: 36px; color: #4dd8ff; margin-bottom: 15px; }
+  .player-slot { display: flex; justify-content: space-between; align-items: center; background: #0d1117; padding: 12px 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #1f2937; }
+  .status-badge { font-weight: bold; font-size: 12px; padding: 4px 8px; border-radius: 4px; }
+  .status-badge.ready { background: #1f6feb; color: #fff; }
+  .status-badge.waiting { background: #d29922; color: #fff; }
+  .btn-ready { width: 100%; padding: 14px; background: #1f6feb; border: none; color: #fff; font-family: 'Teko', sans-serif; font-size: 26px; border-radius: 6px; cursor: pointer; margin-top: 15px; transition: 0.2s; }
+  .btn-ready:hover { background: #388bfd; }
+  .btn-ready.is-ready { background: #da3633; }
+  .btn-ready.is-ready:hover { background: #b62324; }
+  .countdown-overlay { display: none; font-family: 'Teko', sans-serif; font-size: 72px; color: #4dd8ff; margin-top: 10px; animation: timerPulse 0.5s infinite alternate; }
+
+  /* UKŁAD GRY */
+  .game-layout { display: none; justify-content: center; align-items: flex-start; width: 100%; max-width: 1000px; }
+
+  /* EKRAN BOMBY */
+  .bomb-frame { width: 680px; height: 460px; background: #131822; border: 2px solid #1f2937; border-radius: 10px; padding: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; animation: fadeScaleIn 0.3s ease-out; }
+  .header-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding: 0 5px; }
+  .sys-title { font-size: 11px; font-weight: bold; color: #7d8590; letter-spacing: 1px; }
+  .mod-title { font-family: 'Teko', sans-serif; font-size: 34px; color: #4dd8ff; letter-spacing: 1px; line-height: 30px; text-transform: uppercase; }
+  .status-bulb { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #1f2937; background: #21262d; transition: all 0.3s ease; }
+
+  .inner-screen { width: 100%; height: 360px; background: #0d1117; border: 1px solid #1f2937; border-radius: 6px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: radial-gradient(#1f2937 1.5px, transparent 1.5px); background-size: 18px 18px; padding: 10px; overflow: hidden; }
+
+  /* KABLE */
+  .cables-container { display: flex; gap: 40px; justify-content: center; align-items: center; height: 100%; }
+  .cable-wrapper { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.2s; }
+  .cable-wrapper:hover { transform: scale(1.05); }
+  .cable-socket { width: 32px; height: 16px; background: #21262d; border: 2px solid #0d1117; border-radius: 50%; }
+  .cable-wire { width: 14px; height: 170px; transition: 0.2s; position: relative; }
+  .cable-num { font-size: 13px; font-weight: bold; color: #fff; background: #131822; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #1f2937; margin-top: 8px; }
+
+  /* KIERUNKI */
+  .dpad-container { display: grid; grid-template-columns: repeat(3, 80px); grid-template-rows: repeat(3, 80px); gap: 12px; justify-content: center; align-content: center; }
+  .dpad-btn { background: #21262d; border: 1px solid #1f2937; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #4dd8ff; box-shadow: 0 4px 0 #131822; transition: transform 0.1s; }
+  .dpad-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #131822; }
+  .dpad-center { background: #131822; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #1f2937; font-family: 'Teko', sans-serif; font-size: 22px; color: #4dd8ff; }
+
+  /* HASŁO */
+  .word-box { display: flex; gap: 8px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
+  .letter-box { width: 44px; height: 52px; border: 1px solid #1f2937; background: #131822; border-radius: 6px; color: #4dd8ff; font-family: 'Teko', sans-serif; font-size: 36px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+  .clue-text { font-size: 26px; color: #4dd8ff; text-align: center; margin-top: 15px; font-family: 'Teko', sans-serif; }
+  .gray-small-info { font-size: 13px; color: #8b949e; text-align: center; margin-top: 15px; }
+  .btn-submit-word { background: #4dd8ff; border: none; color: #0b0f14; font-family: 'Teko', sans-serif; font-size: 22px; padding: 6px 20px; border-radius: 6px; cursor: pointer; margin-top: 12px; transition: 0.2s; font-weight: bold; }
+  .btn-submit-word:hover { background: #3ab1cc; }
+
+  /* SEGREGATOR POŚREDNIKA */
+  .binder-container { display: none; width: 480px; height: 580px; background: #fdfbf7; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); padding: 30px 20px 20px 50px; color: #111; position: relative; border-left: 18px solid #333; }
+  .binder-rings { position: absolute; left: -14px; top: 30px; bottom: 30px; display: flex; flex-direction: column; justify-content: space-between; }
+  .ring { width: 30px; height: 16px; background: linear-gradient(to right, #888, #fff, #666); border-radius: 10px; border: 1px solid #444; }
+  .binder-page { display: none; height: 100%; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; }
+  .binder-page.active { display: flex; }
+  .manual-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+  .manual-table th, .manual-table td { border: 2px solid #222; padding: 6px 4px; text-align: center; font-weight: bold; }
+  .manual-table th { background: #eee; }
+  .bulb-icon { width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 1px solid #000; }
+  .page-nav { display: flex; gap: 10px; width: 100%; justify-content: space-between; margin-top: 10px; }
+  .page-nav button { padding: 8px 16px; background: #222; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+  /* PANEL BOCZNY */
+  .side-panel { display: none; width: 320px; background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 15px; margin-left: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .timer-display { font-family: 'Teko', sans-serif; font-size: 48px; color: #4dd8ff; text-align: center; letter-spacing: 2px; }
+  .players-list { margin: 10px 0; border-bottom: 1px solid #1f2937; padding-bottom: 10px; font-size: 13px; color: #8b949e; }
+  .chat-box { height: 180px; background: #0d1117; border: 1px solid #1f2937; border-radius: 6px; padding: 10px; overflow-y: auto; font-size: 13px; margin-bottom: 10px; }
+  .chat-msg { margin-bottom: 5px; word-break: break-word; }
+  .chat-msg b { color: #4dd8ff; }
+  .chat-input-area { display: flex; gap: 5px; }
+  .chat-input-area input { flex: 1; padding: 8px; background: #0d1117; border: 1px solid #1f2937; color: #fff; border-radius: 4px; }
+  .chat-input-area input:focus { border-color: #4dd8ff; outline: none; }
+  .chat-input-area button { padding: 8px 12px; background: #4dd8ff; border: none; color: #0b0f14; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  .chat-input-area button:hover { background: #3ab1cc; }
+</style>
+</head>
+<body>
+
+  <a href="index.html" class="btn-back">◄ POWRÓT DO MENU</a>
+
+  <!-- KROK 1: LOBBY -->
+  <div class="lobby-screen" id="lobbyScreen">
+    <div class="selection-title">BANK PALETO</div>
+    <div style="font-size: 14px; color: #7d8590; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">Tryb Wieloosobowy (3 Graczy)</div>
+    
+    <div class="lobby-box">
+      <h3 style="font-family:'Teko'; font-size:28px; color:#e6edf3; margin-bottom: 10px;">Dołącz do Pokoju</h3>
+      <input type="text" id="username" placeholder="Twój Nick...">
+      <input type="text" id="roomId" placeholder="Wpisz nazwę pokoju">
+      <select id="roleSelect">
+        <option value="niemowa">1. Niemowa</option>
+        <option value="posrednik">2. Pośrednik</option>
+        <option value="niewidomy">3. Niewidomy </option>
+      </select>
+      <button class="btn-start" onclick="initPeer()">DOŁĄCZ DO LOBBY</button>
+    </div>
+  </div>
+
+  <!-- KROK 2: GOTOWOŚĆ -->
+  <div class="ready-screen" id="readyScreen">
+    <div class="ready-title">POCZEKALNIA POKOJU</div>
+    <div id="slotsContainer">
+      <div class="player-slot"><span>1. Niemowa</span><span class="status-badge waiting" id="status-niemowa">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span>2. Pośrednik</span><span class="status-badge waiting" id="status-posrednik">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span>3. Niewidomy</span><span class="status-badge waiting" id="status-niewidomy">OCZEKIWANIE...</span></div>
+    </div>
+    <button class="btn-ready" id="btnReady" onclick="toggleReady()">JESTEM GOTÓW</button>
+    <div class="countdown-overlay" id="countdownOverlay">3</div>
+  </div>
+
+  <!-- KROK 3: GRA -->
+  <div class="game-layout" id="gameLayout">
+    <!-- EKRAN BOMBY -->
+    <div class="bomb-frame" id="bombFrame">
+      <div class="header-bar">
+        <div>
+          <div class="sys-title">PALETO SYSTEM BEZPIECZEŃSTWA</div>
+          <div class="mod-title" id="moduleTitle">MODUŁ KABLI</div>
+        </div>
+        <div class="status-bulb" id="statusBulb"></div>
+      </div>
+      <div class="inner-screen" id="innerScreen">
+        <div class="module-content" id="moduleContent"></div>
+      </div>
+    </div>
+
+    <!-- SEGREGATOR -->
+    <div class="binder-container" id="binderContainer">
+      <div class="binder-rings"><div class="ring"></div><div class="ring"></div><div class="ring"></div></div>
+      <div class="binder-page active" id="page1">
+        <h3 style="font-family:'Teko'; font-size:32px;">MODUŁ KABLI</h3>
+        <p style="font-size:12px; margin-bottom:10px;">Znajdź kolor kabla na podstawie ilości kabli i koloru lampki.</p>
+        <table class="manual-table">
+          <tr><th>Kable</th><th><span class="bulb-icon" style="background:red;"></span></th><th><span class="bulb-icon" style="background:yellow;"></span></th><th><span class="bulb-icon" style="background:green;"></span></th><th><span class="bulb-icon" style="background:blue;"></span></th></tr>
+          <tr><td>3 Kable</td><td>Czerwony</td><td>Niebieski</td><td>Żółty</td><td>Zielony</td></tr>
+          <tr><td>4 Kable</td><td>Żółty</td><td>Zielony</td><td>Czerwony</td><td>Niebieski</td></tr>
+        </table>
+        <div class="page-nav"><button disabled>◄ Poprzednia</button><button onclick="changePage(2)">Następna ►</button></div>
+      </div>
+      <div class="binder-page" id="page2">
+        <h3 style="font-family:'Teko'; font-size:32px;">MODUŁ KIERUNKU</h3>
+        <p style="font-size:12px; margin-bottom:10px;">Wyznacz kierunek łącząc cyfrę Braille'a oraz kolor lampki.</p>
+        <table class="manual-table">
+          <tr><th>Braille</th><th><span class="bulb-icon" style="background:red;"></span></th><th><span class="bulb-icon" style="background:yellow;"></span></th><th><span class="bulb-icon" style="background:green;"></span></th><th><span class="bulb-icon" style="background:blue;"></span></th></tr>
+          <tr><td>1</td><td>▲ GÓRA</td><td>▼ DÓŁ</td><td>◄ LEWO</td><td>► PRAWO</td></tr>
+          <tr><td>4</td><td>► PRAWO</td><td>◄ LEWO</td><td>▲ GÓRA</td><td>▼ DÓŁ</td></tr>
+          <tr><td>2</td><td>▼ DÓŁ</td><td>▲ GÓRA</td><td>► PRAWO</td><td>◄ LEWO</td></tr>
+          <tr><td>7</td><td>◄ LEWO</td><td>► PRAWO</td><td>▼ DÓŁ</td><td>▲ GÓRA</td></tr>
+          <tr><td>5</td><td>▲ GÓRA</td><td>◄ LEWO</td><td>► PRAWO</td><td>▼ DÓŁ</td></tr>
+          <tr><td>3</td><td>► PRAWO</td><td>▼ DÓŁ</td><td>▲ GÓRA</td><td>◄ LEWO</td></tr>
+          <tr><td>6</td><td>◄ LEWO</td><td>▲ GÓRA</td><td>▼ DÓŁ</td><td>► PRAWO</td></tr>
+          <tr><td>9</td><td>▼ DÓŁ</td><td>► PRAWO</td><td>◄ LEWO</td><td>▲ GÓRA</td></tr>
+        </table>
+        <div class="page-nav"><button onclick="changePage(1)">◄ Poprzednia</button><button onclick="changePage(3)">Następna ►</button></div>
+      </div>
+      <div class="binder-page" id="page3">
+        <h3 style="font-family:'Teko'; font-size:32px;">MODUŁ HASŁO</h3>
+        <p style="font-size:14px; margin-top:40px; color:#c0392b; font-weight:bold;">BRAK INSTRUKCJI DLA POŚREDNIKA.</p>
+        <div class="page-nav" style="margin-top:auto;"><button onclick="changePage(2)">◄ Poprzednia</button><button disabled>Następna ►</button></div>
+      </div>
+    </div>
+
+    <!-- PANEL BOCZNY -->
+    <div class="side-panel" id="sidePanel" style="display: block;">
+      <div class="timer-display" id="timerDisplay">03:00</div>
+      <div class="players-list" id="playersList">Gracz: Łączenie...</div>
+      <div class="chat-box" id="chatBox"></div>
+      <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Napisz..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <button onclick="sendChatMessage()">Wyślij</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let peer;
+  let connsMap = {}; 
+  let hostConn = null; 
+  let myRole = 'niemowa', myNick = 'Gracz', roomId = '';
+  let isReady = false;
+  let readyStates = { niemowa: false, posrednik: false, niewidomy: false };
+  let timeLeft = 180;
+  let timerInterval;
+
+  const wordDatabase = [
+    { word: "SZTANGA", clue: "Podnoszenie ciężarów" },
+    { word: "LEW", clue: "Król zwierząt" },
+    { word: "MARS", clue: "Czerwona planeta" },
+    { word: "OCEAN", clue: "Wielka słona woda" },
+    { word: "WULKAN", clue: "Góra z lawą" },
+    { word: "PIZZA", clue: "Włoskie danie z serem" },
+    { word: "PILOT", clue: "Siedzi w kokpicie samolotu" }
+  ];
+
+  let gameState = {
+    module: 'kable', 
+    lightColor: 'red', 
+    cableCount: 3, 
+    cablesColors: [],
+    targetColorHex: '', 
+    brailleVal: 1, 
+    correctTargetPos: 'top', 
+    arrowsMap: { top: '▲', bottom: '▼', left: '◄', right: '►' },
+    passwordData: { word: '', clue: '', guessed: '', attemptsLeft: 3 }
+  };
+
+  const colors = ['red', 'yellow', 'green', 'blue'];
+  const brailleNumbers = [1, 4, 2, 7, 5, 3, 6, 9];
+  const cableColorMapHex = {
+    'Czerwony': '#e74c3c',
+    'Niebieski': '#3498db',
+    'Żółty': '#f1c40f',
+    'Zielony': '#2ecc71'
+  };
+
+  function initPeer() {
+    myNick = document.getElementById('username').value.trim() || 'Gracz';
+    roomId = document.getElementById('roomId').value.trim();
+    myRole = document.getElementById('roleSelect').value;
+
+    if(!roomId) return alert('Podaj ID Pokoju!');
+
+    document.getElementById('lobbyScreen').style.display = 'none';
+    document.getElementById('readyScreen').style.display = 'block';
+
+    peer = new Peer(`${roomId}-${myRole}`);
+    peer.on('open', () => {
+      readyStates[myRole] = false;
+      updateReadyUI();
+      if (myRole !== 'niemowa') connectToHost();
+    });
+
+    if (myRole === 'niemowa') {
+      peer.on('connection', (conn) => {
+        conn.on('open', () => {
+          conn.on('data', (data) => handleData(data, conn));
+        });
+      });
+    }
+  }
+
+  function connectToHost() {
+    hostConn = peer.connect(`${roomId}-niemowa`);
+    hostConn.on('open', () => {
+      hostConn.send({ type: 'JOIN_LOBBY', role: myRole });
+    });
+    hostConn.on('data', (data) => handleData(data, hostConn));
+  }
+
+  function toggleReady() {
+    isReady = !isReady;
+    readyStates[myRole] = isReady;
+    const btn = document.getElementById('btnReady');
+    if(isReady) {
+      btn.innerText = "COFNIJ GOTOWOŚĆ";
+      btn.classList.add('is-ready');
+    } else {
+      btn.innerText = "JESTEM GOTÓW";
+      btn.classList.remove('is-ready');
+    }
+
+    if (myRole === 'niemowa') {
+      broadcastToAll({ type: 'LOBBY_STATE', states: readyStates });
+      updateReadyUI();
+      checkAllReady();
+    } else if (hostConn && hostConn.open) {
+      hostConn.send({ type: 'READY_CHANGE', role: myRole, ready: isReady });
+    }
+  }
+
+  function updateReadyUI() {
+    for(let role in readyStates) {
+      const badge = document.getElementById(`status-${role}`);
+      if(badge) {
+        if(readyStates[role]) {
+          badge.innerText = "GOTÓW";
+          badge.className = "status-badge ready";
+        } else {
+          badge.innerText = "OCZEKIWANIE...";
+          badge.className = "status-badge waiting";
+        }
+      }
+    }
+  }
+
+  function checkAllReady() {
+    if(readyStates.niemowa && readyStates.posrednik && readyStates.niewidomy) {
+      if(myRole === 'niemowa') {
+        broadcastToAll({ type: 'START_COUNTDOWN' });
+        startCountdown();
+      }
+    }
+  }
+
+  function startCountdown() {
+    let cnt = 3;
+    const overlay = document.getElementById('countdownOverlay');
+    overlay.style.display = 'block';
+    overlay.innerText = cnt;
+    let cdInterval = setInterval(() => {
+      cnt--;
+      if(cnt > 0) {
+        overlay.innerText = cnt;
+      } else {
+        clearInterval(cdInterval);
+        overlay.style.display = 'none';
+        startGame();
+      }
+    }, 1000);
+  }
+
+  function startGame() {
+    document.getElementById('readyScreen').style.display = 'none';
+    document.getElementById('gameLayout').style.display = 'flex';
+    document.getElementById('playersList').innerText = `Gracz: ${myNick} (${myRole.toUpperCase()})`;
+
+    if(myRole === 'posrednik') {
+      document.getElementById('binderContainer').style.display = 'flex';
+      document.getElementById('bombFrame').style.display = 'none';
+    } else {
+      document.getElementById('bombFrame').style.display = 'block';
+      document.getElementById('binderContainer').style.display = 'none';
+    }
+
+    if(myRole === 'niemowa') {
+      generatePaletoSolution();
+      startTimer();
+      broadcastToAll({ type: 'SYNC', state: gameState, time: timeLeft });
+    }
+    render(true);
+  }
+
+  function generatePaletoSolution() {
+    gameState.module = 'kable';
+    gameState.lightColor = colors[Math.floor(Math.random() * colors.length)];
+    gameState.cableCount = Math.random() > 0.5 ? 3 : 4;
+    gameState.brailleVal = brailleNumbers[Math.floor(Math.random() * brailleNumbers.length)];
+
+    const cableManualNames = {
+      3: { red: 'Czerwony', yellow: 'Niebieski', green: 'Żółty', blue: 'Zielony' },
+      4: { red: 'Żółty', yellow: 'Zielony', green: 'Czerwony', blue: 'Niebieski' }
+    };
+    
+    const correctColorName = cableManualNames[gameState.cableCount][gameState.lightColor];
+    gameState.targetColorHex = cableColorMapHex[correctColorName];
+
+    let allHexes = Object.values(cableColorMapHex);
+    let availableColors = [gameState.targetColorHex];
+    while(availableColors.length < gameState.cableCount) {
+      let randHex = allHexes[Math.floor(Math.random() * allHexes.length)];
+      if(!availableColors.includes(randHex)) {
+        availableColors.push(randHex);
+      }
+    }
+    gameState.cablesColors = availableColors.sort(() => 0.5 - Math.random());
+
+    const dirMap = {
+      1: { red: '▲', yellow: '▼', green: '◄', blue: '►' },
+      4: { red: '►', yellow: '◄', green: '▲', blue: '▼' },
+      2: { red: '▼', yellow: '▲', green: '►', blue: '◄' },
+      7: { red: '◄', yellow: '►', green: '▼', blue: '▲' },
+      5: { red: '▲', yellow: '◄', green: '►', blue: '▼' },
+      3: { red: '►', yellow: '▼', green: '▲', blue: '◄' },
+      6: { red: '◄', yellow: '▲', green: '▼', blue: '►' },
+      9: { red: '▼', yellow: '▲', green: '▼', blue: '►' }
+    };
+    const requiredSymbol = dirMap[gameState.brailleVal][gameState.lightColor];
+    const positions = ['top', 'bottom', 'left', 'right'];
+    const symbols = ['▲', '▼', '◄', '►'].sort(() => 0.5 - Math.random());
+    gameState.arrowsMap = { top: symbols[0], bottom: symbols[1], left: symbols[2], right: symbols[3] };
+
+    for (let pos of positions) {
+      if (gameState.arrowsMap[pos] === requiredSymbol) {
+        gameState.correctTargetPos = pos;
+        break;
+      }
+    }
+
+    const randomEntry = wordDatabase[Math.floor(Math.random() * wordDatabase.length)];
+    gameState.passwordData = { word: randomEntry.word, clue: randomEntry.clue, guessed: '', attemptsLeft: 3 };
+  }
+
+  function broadcastToAll(data) {
+    for (let r in connsMap) {
+      if (connsMap[r] && connsMap[r].open) connsMap[r].send(data);
+    }
+  }
+
+  function handleData(data, conn) {
+    if (myRole === 'niemowa') {
+      if (data.type === 'JOIN_LOBBY') {
+        connsMap[data.role] = conn;
+        broadcastToAll({ type: 'LOBBY_STATE', states: readyStates });
+        updateReadyUI();
+      } else if (data.type === 'READY_CHANGE') {
+        readyStates[data.role] = data.ready;
+        broadcastToAll({ type: 'LOBBY_STATE', states: readyStates });
+        updateReadyUI();
+        checkAllReady();
+      } else if (data.type === 'CHAT') {
+        addChatMessage(data.nick, data.msg);
+        broadcastToAll(data);
+      } else if (data.type === 'ACTION_CABLE') {
+        verifyCable(data.num);
+      } else if (data.type === 'ACTION_DIR') {
+        verifyDir(data.pos);
+      } else if (data.type === 'ACTION_LETTER') {
+        processLetterInput(data.letter);
+      } else if (data.type === 'ACTION_BACKSPACE') {
+        processBackspaceInput();
+      } else if (data.type === 'ACTION_SUBMIT_WORD') {
+        verifyWordSubmit();
+      }
+    } else {
+      if (data.type === 'LOBBY_STATE') {
+        readyStates = data.states;
+        updateReadyUI();
+      } else if (data.type === 'START_COUNTDOWN') {
+        startCountdown();
+      } else if (data.type === 'SYNC') {
+        let isModuleChange = (gameState.module !== data.state.module);
+        gameState = data.state;
+        timeLeft = data.time;
+        render(isModuleChange);
+      } else if (data.type === 'CHAT') {
+        addChatMessage(data.nick, data.msg);
+      } else if (data.type === 'FAIL') {
+        alert("BŁĄD! Zły ruch lub koniec czasu!");
+        location.reload();
+      } else if (data.type === 'WIN') {
+        alert("SUKCES! Bank Paleto zhakowany!");
+        location.reload();
+      }
+    }
+  }
+
+  function clickCable(num) {
+    if(myRole === 'niemowa') verifyCable(num);
+    else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_CABLE', num: num });
+  }
+
+  function verifyCable(num) {
+    const chosenColor = gameState.cablesColors[num - 1];
+    if (chosenColor === gameState.targetColorHex) {
+      gameState.module = 'kierunki';
+      if(myRole === 'niemowa') {
+        broadcastToAll({ type: 'SYNC', state: gameState, time: timeLeft });
+        render(true);
+      }
+    } else {
+      failGame();
+    }
+  }
+
+  function clickDir(pos) {
+    if(myRole === 'niemowa') verifyDir(pos);
+    else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_DIR', pos: pos });
+  }
+
+  function verifyDir(pos) {
+    if (pos === gameState.correctTargetPos) {
+      gameState.module = 'haslo';
+      if(myRole === 'niemowa') {
+        broadcastToAll({ type: 'SYNC', state: gameState, time: timeLeft });
+        render(true);
+      }
+    } else {
+      failGame();
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (document.activeElement.id === 'chatInput') return;
+    if (gameState.module === 'haslo' && (myRole === 'niewidomy' || myRole === 'niemowa')) {
+      if (e.key === 'Enter') {
+        if(myRole === 'niemowa') verifyWordSubmit();
+        else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_SUBMIT_WORD' });
+        return;
+      }
+      if (e.key === 'Backspace') {
+        if(myRole === 'niemowa') processBackspaceInput();
+        else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_BACKSPACE' });
+        return;
+      }
+      const key = e.key.toUpperCase();
+      if ("AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ".includes(key)) {
+        if(myRole === 'niemowa') processLetterInput(key);
+        else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_LETTER', letter: key });
+      }
+    }
+  });
+
+  function processLetterInput(letter) {
+    let pw = gameState.passwordData;
+    if (pw.guessed.length < pw.word.length) {
+      pw.guessed += letter;
+      if(myRole === 'niemowa') broadcastToAll({ type: 'SYNC', state: gameState, time: timeLeft });
+      render(false);
+    }
+  }
+
+  function processBackspaceInput() {
+    let pw = gameState.passwordData;
+    if (pw.guessed.length > 0) {
+      pw.guessed = pw.guessed.slice(0, -1);
+      if(myRole === 'niemowa') broadcastToAll({ type: 'SYNC', state: gameState, time: timeLeft });
+      render(false);
+    }
+  }
+
+  function submitWord() {
+    if(myRole === 'niemowa') verifyWordSubmit();
+    else if(hostConn && hostConn.open) hostConn.send({ type: 'ACTION_SUBMIT_WORD' });
+  }
+
+  function verifyWordSubmit() {
+    let pw = gameState.passwordData;
+    if (pw.guessed === pw.word) {
+      if(myRole === 'niemowa') {
+        broadcastToAll({ type: 'WIN' });
+        alert("SUKCES! Bank Paleto zhakowany!");
+        location.reload();
+      }
+    } else {
+      pw.attemptsLeft--;
+      pw.guessed = '';
+      if (pw.attemptsLeft <= 0) {
+        failGame();
+        return;
+      }
+      if(myRole === 'niemowa') broadcastToAll({ type: 'SYNC', state: gameState, time: timeLeft });
+      render(false);
+    }
+  }
+
+  function failGame() {
+    if(myRole === 'niemowa') {
+      broadcastToAll({ type: 'FAIL' });
+      alert("BŁĄD! Zły ruch lub koniec prób!");
+      location.reload();
+    }
+  }
+
+  function startTimer() {
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      let m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+      let s = String(timeLeft % 60).padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+      if(myRole === 'niemowa') broadcastToAll({ type: 'SYNC', state: gameState, time: timeLeft });
+      if(timeLeft <= 0) failGame();
+    }, 1000);
+  }
+
+  function changePage(pageNo) {
+    document.querySelectorAll('.binder-page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page${pageNo}`).classList.add('active');
+  }
+
+  function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if(!msg) return;
+    input.value = '';
+    addChatMessage(myNick, msg);
+    if(myRole === 'niemowa') {
+      broadcastToAll({ type: 'CHAT', nick: myNick, msg: msg });
+    } else if(hostConn && hostConn.open) {
+      hostConn.send({ type: 'CHAT', nick: myNick, msg: msg });
+    }
+  }
+
+  function addChatMessage(nick, msg) {
+    const box = document.getElementById('chatBox');
+    box.innerHTML += `<div class="chat-msg"><b>${nick}:</b> ${msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function render(animate) {
+    const bulb = document.getElementById('statusBulb');
+    if (myRole === 'niewidomy') {
+      bulb.style.background = '#21262d';
+      bulb.style.boxShadow = 'none';
+    } else {
+      bulb.style.background = gameState.lightColor;
+      bulb.style.boxShadow = `0 0 15px ${gameState.lightColor}`;
+    }
+
+    const contentBox = document.getElementById('moduleContent');
+
+    if(gameState.module === 'kable') {
+      document.getElementById('moduleTitle').innerText = 'MODUŁ KABLI';
+      let html = '<div class="cables-container">';
+      for(let i = 0; i < gameState.cableCount; i++) {
+        let wireColor = (myRole === 'niewidomy') ? '#30363d' : gameState.cablesColors[i];
+        html += `
+          <div class="cable-wrapper" onclick="clickCable(${i+1})">
+            <div class="cable-socket"></div>
+            <div class="cable-wire" style="background:${wireColor}"></div>
+            <div class="cable-num">${i+1}</div>
+          </div>`;
+      }
+      html += '</div>';
+      contentBox.innerHTML = html;
+    } 
+    else if(gameState.module === 'kierunki') {
+      document.getElementById('moduleTitle').innerText = 'MODUŁ KIERUNKU';
+      let map = gameState.arrowsMap;
+      
+      let topContent = (myRole === 'niewidomy') ? '' : map.top;
+      let leftContent = (myRole === 'niewidomy') ? '' : map.left;
+      let rightContent = (myRole === 'niewidomy') ? '' : map.right;
+      let bottomContent = (myRole === 'niewidomy') ? '' : map.bottom;
+
+      let centerContent = '';
+      if (myRole === 'niewidomy') {
+        centerContent = `<div class="dpad-center" title="Najeżdżasz myszką, aby wyczuć punkty Braille'a" style="cursor:help;" onmouseover="this.innerText='${gameState.brailleVal}'" onmouseout="this.innerText='BRAILLE'">BRAILLE</div>`;
+      } else {
+        centerContent = `<div class="dpad-center"></div>`;
+      }
+
+      contentBox.innerHTML = `
+        <div style="font-size:13px; color:#7d8590; margin-bottom:5px; text-transform:uppercase;">Moduł Weryfikacji Kierunku</div>
+        <div class="dpad-container">
+          <div></div>
+          <div class="dpad-btn" onclick="clickDir('top')">${topContent}</div>
+          <div></div>
+          <div class="dpad-btn" onclick="clickDir('left')">${leftContent}</div>
+          ${centerContent}
+          <div class="dpad-btn" onclick="clickDir('right')">${rightContent}</div>
+          <div></div>
+          <div class="dpad-btn" onclick="clickDir('bottom')">${bottomContent}</div>
+          <div></div>
+        </div>`;
+    } 
+    else if(gameState.module === 'haslo') {
+      document.getElementById('moduleTitle').innerText = 'MODUŁ HASŁA';
+      let pw = gameState.passwordData;
+      let boxesHtml = '<div class="word-box">';
+      for(let i = 0; i < pw.word.length; i++) {
+        let char = pw.guessed[i] || '';
+        boxesHtml += `<div class="letter-box">${char}</div>`;
+      }
+      boxesHtml += '</div>';
+
+      let clueDisplay = '';
+      if (myRole === 'niewidomy') {
+        clueDisplay = `<div class="gray-small-info">Ilość liter: ${pw.word.length}</div>`;
+      } else {
+        clueDisplay = `<div class="clue-text">PODPOWIEDŹ: ${pw.clue}</div>`;
+      }
+
+      contentBox.innerHTML = `
+        <div style="text-align:center; width:100%;">
+          ${boxesHtml}
+          <button class="btn-submit-word" onclick="submitWord()">ZATWIERDŹ</button>
+          ${clueDisplay}
+        </div>`;
+    }
+  }
+</script>
+
+</body>
+</html>

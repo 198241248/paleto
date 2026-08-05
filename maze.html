@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>maze bank</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+
+  @keyframes fadeScaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes timerPulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+  }
+
+  .btn-back { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; text-decoration: none; transition: 0.2s; z-index: 10; }
+  .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
+
+  .lobby-screen { text-align: center; max-width: 500px; width: 100%; padding: 20px; animation: fadeScaleIn 0.3s ease-out; }
+  .selection-title { font-family: 'Teko', sans-serif; font-size: 48px; letter-spacing: 3px; color: #4dd8ff; text-shadow: 0 0 20px rgba(77,216,255,0.3); text-transform: uppercase; margin-bottom: 5px; }
+  .lobby-box { background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 25px; width: 100%; margin-top: 15px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .lobby-box input, .lobby-box select { width: 100%; padding: 12px; margin: 8px 0 16px 0; background: #0d1117; border: 1px solid #1f2937; color: #fff; border-radius: 6px; font-size: 15px; }
+  .lobby-box input:focus, .lobby-box select:focus { border-color: #4dd8ff; outline: none; }
+  .btn-start { width: 100%; padding: 14px; background: #4dd8ff; border: none; color: #0b0f14; font-family: 'Teko', sans-serif; font-size: 24px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: bold; }
+  .btn-start:hover { background: #3ab1cc; }
+
+  .ready-screen { display: none; width: 100%; max-width: 500px; background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 25px; text-align: center; animation: fadeScaleIn 0.3s ease-out; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .ready-title { font-family: 'Teko', sans-serif; font-size: 36px; color: #4dd8ff; margin-bottom: 15px; }
+  .player-slot { display: flex; justify-content: space-between; align-items: center; background: #0d1117; padding: 12px 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #1f2937; }
+  .status-badge { font-weight: bold; font-size: 12px; padding: 4px 8px; border-radius: 4px; }
+  .status-badge.ready { background: #1f6feb; color: #fff; }
+  .status-badge.waiting { background: #d29922; color: #fff; }
+  .btn-ready { width: 100%; padding: 14px; background: #1f6feb; border: none; color: #fff; font-family: 'Teko', sans-serif; font-size: 26px; border-radius: 6px; cursor: pointer; margin-top: 15px; transition: 0.2s; }
+  .btn-ready:hover { background: #388bfd; }
+  .btn-ready.is-ready { background: #da3633; }
+  .btn-ready.is-ready:hover { background: #b62324; }
+  .countdown-overlay { display: none; font-family: 'Teko', sans-serif; font-size: 72px; color: #4dd8ff; margin-top: 10px; animation: timerPulse 0.5s infinite alternate; }
+
+  .game-layout { display: none; justify-content: center; align-items: flex-start; width: 100%; max-width: 1050px; }
+
+  .bomb-frame { width: 680px; height: 500px; background: #131822; border: 2px solid #1f2937; border-radius: 10px; padding: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; animation: fadeScaleIn 0.3s ease-out; }
+  .header-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding: 0 5px; }
+  .sys-title { font-size: 11px; font-weight: bold; color: #7d8590; letter-spacing: 1px; }
+  .mod-title { font-family: 'Teko', sans-serif; font-size: 34px; color: #4dd8ff; letter-spacing: 1px; line-height: 30px; text-transform: uppercase; }
+  .status-bulb { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #1f2937; background: #21262d; transition: all 0.3s ease; }
+
+  .inner-screen { width: 100%; height: 400px; background: #0d1117; border: 1px solid #1f2937; border-radius: 6px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: radial-gradient(#1f2937 1.5px, transparent 1.5px); background-size: 18px 18px; padding: 10px; overflow: hidden; }
+
+  .symbols-row { display: flex; gap: 6px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center; }
+  .symbol-box { width: 44px; height: 52px; background: #131822; border: 1px solid #1f2937; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #facc15; }
+  
+  .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 500px; }
+  .doc-card { background: #131822; border: 1px solid #1f2937; padding: 10px; border-radius: 8px; text-align: left; }
+  .doc-card .label { font-size: 10px; color: #8b949e; text-transform: uppercase; margin-bottom: 2px; }
+  .doc-card .val { font-size: 13px; color: #facc15; font-weight: 700; }
+
+  .pin-display { display: flex; gap: 10px; margin-bottom: 15px; }
+  .pin-slot { width: 45px; height: 45px; background: #131822; border: 1px solid #1f2937; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'Teko', sans-serif; font-size: 24px; color: #4dd8ff; }
+  .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 280px; }
+  .key-btn { background: #131822; border: 1px solid #1f2937; color: #e6edf3; padding: 8px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; cursor: pointer; transition: 0.1s; }
+  .key-btn:hover { background: #1f2937; border-color: #4dd8ff; }
+  .key-btn.action { color: #4dd8ff; }
+
+  .side-panel { display: block; width: 320px; background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 15px; margin-left: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  .timer-display { font-family: 'Teko', sans-serif; font-size: 48px; color: #4dd8ff; text-align: center; letter-spacing: 2px; }
+  .players-list { margin: 10px 0; border-bottom: 1px solid #1f2937; padding-bottom: 10px; font-size: 13px; color: #8b949e; }
+  .chat-box { height: 180px; background: #0d1117; border: 1px solid #1f2937; border-radius: 6px; padding: 10px; overflow-y: auto; font-size: 13px; margin-bottom: 10px; }
+  .chat-msg { margin-bottom: 5px; word-break: break-word; }
+  .chat-msg b { color: #4dd8ff; }
+  .chat-input-area { display: flex; gap: 5px; }
+  .chat-input-area input { flex: 1; padding: 8px; background: #0d1117; border: 1px solid #1f2937; color: #fff; border-radius: 4px; }
+  .chat-input-area input:focus { border-color: #4dd8ff; outline: none; }
+  .chat-input-area button { padding: 8px 12px; background: #4dd8ff; border: none; color: #0b0f14; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  .chat-input-area button:hover { background: #3ab1cc; }
+</style>
+</head>
+<body>
+
+  <a href="index.html" class="btn-back">◄ POWRÓT DO MENU</a>
+
+  <div class="lobby-screen" id="lobbyScreen">
+    <div class="selection-title">MAZE BANK</div>
+    <div style="font-size: 14px; color: #7d8590; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">Tryb Wieloosobowy (3 Graczy)</div>
+    
+    <div class="lobby-box">
+      <h3 style="font-family:'Teko'; font-size:28px; color:#e6edf3; margin-bottom: 10px;">Dołącz do Pokoju</h3>
+      <input type="text" id="username" placeholder="Twój Nick...">
+      <input type="text" id="roomId" placeholder="Wpisz nazwę pokoju">
+      <select id="roleSelect">
+        <option value="haker">1. Haker</option>
+        <option value="zwiadowca">2. Zwiadowca</option>
+        <option value="technik">3. Technik</option>
+      </select>
+      <button class="btn-start" onclick="initPeer()">DOŁĄCZ DO LOBBY</button>
+    </div>
+  </div>
+
+  <div class="ready-screen" id="readyScreen">
+    <div class="ready-title">POCZEKALNIA POKOJU (3 ROLE)</div>
+    <div id="slotsContainer">
+      <div class="player-slot"><span>1. Haker</span><span class="status-badge waiting" id="status-haker">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span>2. Zwiadowca</span><span class="status-badge waiting" id="status-zwiadowca">OCZEKIWANIE...</span></div>
+      <div class="player-slot"><span>3. Technik</span><span class="status-badge waiting" id="status-technik">OCZEKIWANIE...</span></div>
+    </div>
+    <button class="btn-ready" id="btnReady" onclick="toggleReady()">JESTEM GOTÓW</button>
+    <div class="countdown-overlay" id="countdownOverlay">3</div>
+  </div>
+
+  <div class="game-layout" id="gameLayout">
+    <div class="bomb-frame" id="bombFrame">
+      <div class="header-bar">
+        <div>
+          <div class="sys-title">MAZE BANK SYSTEM BEZPIECZEŃSTWA</div>
+          <div class="mod-title" id="moduleTitle">SEKWENCJA SYMBOLI</div>
+        </div>
+        <div class="status-bulb" id="statusBulb"></div>
+      </div>
+      <div class="inner-screen">
+        <div id="moduleContent" style="width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;"></div>
+      </div>
+    </div>
+
+    <div class="side-panel" id="sidePanel">
+      <div class="timer-display" id="timerDisplay">03:00</div>
+      <div class="players-list" id="playersList">Gracz: Łączenie...</div>
+      <div class="chat-box" id="chatBox"></div>
+      <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Napisz..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <button onclick="sendChatMessage()">Wyślij</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let peer;
+  let connsMap = {}; 
+  let hostConn = null; 
+  let myRole = 'haker', myNick = 'Gracz', roomId = '';
+  let isReady = false;
+  let readyStates = { haker: false, zwiadowca: false, technik: false };
+  let timeLeft = 180;
+  let timerInterval;
+
+  const ALL_SYMBOLS = ['●', '■', '▲', '◆', '⬡', '⬠', '✦', '✚', '★', '⯑', '🞎', '⬟'];
+  
+  let gameState = {
+    symbols: [],
+    mapping: {},
+    ruleStart: 1,
+    ruleDir: 'zgodnie',
+    ruleStep: 1,
+    ruleAdd: 1,
+    enteredPin: [],
+    scoutConfirmed: false,
+    gameWon: false
+  };
+
+  function initPeer() {
+    myNick = document.getElementById('username').value.trim() || 'Gracz';
+    roomId = document.getElementById('roomId').value.trim();
+    myRole = document.getElementById('roleSelect').value;
+
+    if(!roomId) return alert('Musisz wpisać nazwę pokoju!');
+
+    document.getElementById('lobbyScreen').style.display = 'none';
+    document.getElementById('readyScreen').style.display = 'block';
+
+    const peerId = `${roomId}-${myRole}`;
+    
+    if (peer) {
+      peer.destroy();
+    }
+
+    peer = new Peer(peerId);
+
+    peer.on('open', () => {
+      console.log("Połączono z PeerJS, mój ID:", peerId);
+      readyStates[myRole] = false;
+      isReady = false;
+      updateReadyUI();
+
+      if (myRole !== 'haker') {
+        connectToHost();
+      } else {
+        readyStates.haker = false;
+      }
+    });
+
+    peer.on('error', (err) => {
+      console.error("PeerJS error:", err);
+      if(err.type === 'unavailable-id') {
+        alert("Ta rola w tym pokoju jest już zajęta! Sprawdź, czy nie masz jej otwartej w innej karcie.");
+      } else {
+        alert("Błąd PeerJS: " + err.type);
+      }
+      location.reload();
+    });
+
+    if (myRole === 'haker') {
+      peer.on('connection', (conn) => {
+        conn.on('open', () => {
+          console.log("Klient połączył się do Hakera:", conn.peer);
+          
+          conn.on('data', (data) => {
+            handleHakerServerData(data, conn);
+          });
+
+          conn.on('close', () => {
+            for(let r in connsMap) {
+              if(connsMap[r] === conn) {
+                connsMap[r] = null;
+                readyStates[r] = false;
+              }
+            }
+            broadcastLobbyState();
+          });
+        });
+      });
+    }
+  }
+
+  function connectToHost() {
+    const hostId = `${roomId}-haker`;
+    console.log("Łączenie z hostem (Hakerem):", hostId);
+    
+    setTimeout(() => {
+      hostConn = peer.connect(hostId);
+      
+      hostConn.on('open', () => {
+        console.log("Połączono z Hakerem pomyślnie!");
+        hostConn.send({ type: 'REGISTER', role: myRole, nick: myNick });
+      });
+      
+      hostConn.on('data', (data) => {
+        handleClientData(data);
+      });
+
+      hostConn.on('error', (err) => {
+        console.error("Błąd połączenia z Hakerem:", err);
+        alert("Nie można połączyć się z Hakerem! Upewnij się, że gracz z rolą Haker dla tego pokoju uruchomił się jako pierwszy.");
+      });
+    }, 600);
+  }
+
+  function handleHakerServerData(data, conn) {
+    if (data.type === 'REGISTER') {
+      connsMap[data.role] = conn;
+      console.log(`Zarejestrowano gracza: ${data.role} (${data.nick})`);
+      broadcastLobbyState();
+    } 
+    else if (data.type === 'READY_CHANGE') {
+      readyStates[data.role] = data.ready;
+      broadcastLobbyState();
+      checkAllReady();
+    } 
+    else if (data.type === 'SCOUT_CONFIRM') {
+      gameState.scoutConfirmed = data.confirmed;
+      broadcastGameState();
+      render();
+    } 
+    else if (data.type === 'SUBMIT_PIN') {
+      checkPinSubmission(data.pin);
+    } 
+    else if (data.type === 'CHAT') {
+      addChatMessage(data.nick, data.msg);
+      broadcastMessage({ type: 'CHAT', nick: data.nick, msg: data.msg });
+    }
+  }
+
+  function broadcastLobbyState() {
+    updateReadyUI();
+    for (let r in connsMap) {
+      if (connsMap[r] && connsMap[r].open) {
+        connsMap[r].send({ type: 'LOBBY_STATE', states: readyStates });
+      }
+    }
+  }
+
+  function broadcastGameState() {
+    for (let r in connsMap) {
+      if (connsMap[r] && connsMap[r].open) {
+        connsMap[r].send({ type: 'SYNC', state: gameState, time: timeLeft });
+      }
+    }
+  }
+
+  function broadcastMessage(data) {
+    for (let r in connsMap) {
+      if (connsMap[r] && connsMap[r].open) {
+        connsMap[r].send(data);
+      }
+    }
+  }
+
+  function handleClientData(data) {
+    if (data.type === 'LOBBY_STATE') {
+      readyStates = data.states;
+      updateReadyUI();
+    } 
+    else if (data.type === 'START_COUNTDOWN') {
+      if(data.gameState) gameState = data.gameState;
+      startCountdown();
+    } 
+    else if (data.type === 'SYNC') {
+      gameState = data.state;
+      timeLeft = data.time;
+      if(gameState.gameWon) {
+        triggerWinState();
+      } else {
+        render();
+      }
+    } 
+    else if (data.type === 'GAME_WON') {
+      gameState.gameWon = true;
+      triggerWinState();
+    } 
+    else if (data.type === 'CHAT') {
+      addChatMessage(data.nick, data.msg);
+    }
+  }
+
+  function toggleReady() {
+    isReady = !isReady;
+    readyStates[myRole] = isReady;
+    const btn = document.getElementById('btnReady');
+    
+    if(isReady) {
+      btn.innerText = "COFNIJ GOTOWOŚĆ";
+      btn.classList.add('is-ready');
+    } else {
+      btn.innerText = "JESTEM GOTÓW";
+      btn.classList.remove('is-ready');
+    }
+
+    if (myRole === 'haker') {
+      broadcastLobbyState();
+      checkAllReady();
+    } else if (hostConn && hostConn.open) {
+      hostConn.send({ type: 'READY_CHANGE', role: myRole, ready: isReady });
+    }
+    updateReadyUI();
+  }
+
+  function updateReadyUI() {
+    for(let role in readyStates) {
+      const badge = document.getElementById(`status-${role}`);
+      if(badge) {
+        if(readyStates[role]) {
+          badge.innerText = "GOTÓW";
+          badge.className = "status-badge ready";
+        } else {
+          badge.innerText = "OCZEKIWANIE...";
+          badge.className = "status-badge waiting";
+        }
+      }
+    }
+  }
+
+  function checkAllReady() {
+    if(readyStates.haker && readyStates.zwiadowca && readyStates.technik) {
+      if(myRole === 'haker') {
+        generateGameData();
+        for (let r in connsMap) {
+          if (connsMap[r] && connsMap[r].open) {
+            connsMap[r].send({ type: 'START_COUNTDOWN', gameState: gameState });
+          }
+        }
+        startCountdown();
+      }
+    }
+  }
+
+  function generateGameData() {
+    let shuffledSyms = [...ALL_SYMBOLS].sort(() => 0.5 - Math.random());
+    gameState.symbols = shuffledSyms.slice(0, 8);
+
+    gameState.mapping = {};
+    gameState.symbols.forEach(sym => {
+      gameState.mapping[sym] = Math.floor(Math.random() * 10);
+    });
+
+    gameState.ruleStart = Math.floor(Math.random() * 8) + 1;
+    gameState.ruleDir = Math.random() < 0.5 ? 'zgodnie' : 'przeciwnie';
+    gameState.ruleStep = Math.floor(Math.random() * 3) + 1;
+    gameState.ruleAdd = Math.floor(Math.random() * 5) + 1;
+
+    gameState.enteredPin = [];
+    gameState.scoutConfirmed = false;
+    gameState.gameWon = false;
+  }
+
+  function calculateCorrectPin() {
+    let syms = gameState.symbols;
+    let map = gameState.mapping;
+    let n = syms.length;
+    let pin = [];
+
+    let currentIndex = gameState.ruleStart - 1;
+    let stepDir = gameState.ruleDir === 'zgodnie' ? 1 : -1;
+
+    for(let i=0; i<4; i++) {
+      let sym = syms[currentIndex];
+      let baseDigit = map[sym];
+      let finalDigit = (baseDigit + gameState.ruleAdd) % 10;
+      pin.push(finalDigit);
+
+      currentIndex = (currentIndex + stepDir * gameState.ruleStep + n * 10) % n;
+    }
+    return pin;
+  }
+
+  function startCountdown() {
+    let cnt = 3;
+    const overlay = document.getElementById('countdownOverlay');
+    overlay.style.display = 'block';
+    overlay.innerText = cnt;
+    let cdInterval = setInterval(() => {
+      cnt--;
+      if(cnt > 0) {
+        overlay.innerText = cnt;
+      } else {
+        clearInterval(cdInterval);
+        overlay.style.display = 'none';
+        startGame();
+      }
+    }, 1000);
+  }
+
+  function startGame() {
+    document.getElementById('readyScreen').style.display = 'none';
+    document.getElementById('gameLayout').style.display = 'flex';
+    document.getElementById('playersList').innerText = `Gracz: ${myNick} (${myRole.toUpperCase()})`;
+
+    if(myRole === 'haker') {
+      startTimer();
+      broadcastGameState();
+    }
+    render();
+  }
+
+  function startTimer() {
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      let m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+      let s = String(timeLeft % 60).padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+      if(myRole === 'haker') broadcastGameState();
+      if(timeLeft <= 0) {
+        clearInterval(timerInterval);
+        alert("Koniec czasu!");
+      }
+    }, 1000);
+  }
+
+  function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if(!msg) return;
+    input.value = '';
+    
+    addChatMessage(myNick, msg);
+
+    if(myRole === 'haker') {
+      broadcastMessage({ type: 'CHAT', nick: myNick, msg: msg });
+    } else if(hostConn && hostConn.open) {
+      hostConn.send({ type: 'CHAT', nick: myNick, msg: msg });
+    }
+  }
+
+  function addChatMessage(nick, msg) {
+    const box = document.getElementById('chatBox');
+    box.innerHTML += `<div class="chat-msg"><b>${nick}:</b> ${msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function pressKey(num) {
+    if(gameState.enteredPin.length < 4) {
+      gameState.enteredPin.push(num);
+      render();
+    }
+  }
+
+  function clearPin() {
+    gameState.enteredPin = [];
+    render();
+  }
+
+  function submitPin() {
+    if(gameState.enteredPin.length < 4) {
+      alert("PIN musi składać się z 4 cyfr!");
+      return;
+    }
+    if(myRole === 'haker') {
+      checkPinSubmission(gameState.enteredPin);
+    } else if(hostConn && hostConn.open) {
+      hostConn.send({ type: 'SUBMIT_PIN', pin: gameState.enteredPin });
+    }
+  }
+
+  function checkPinSubmission(submittedPin) {
+    let correctPin = calculateCorrectPin();
+    let isMatch = true;
+    for(let i=0; i<4; i++) {
+      if(submittedPin[i] !== correctPin[i]) isMatch = false;
+    }
+
+    if(isMatch) {
+      gameState.gameWon = true;
+      if(myRole === 'haker') {
+        for (let r in connsMap) {
+          if (connsMap[r] && connsMap[r].open) connsMap[r].send({ type: 'GAME_WON' });
+        }
+      }
+      triggerWinState();
+    } else {
+      alert("BŁĘDNY PIN! Spróbuj ponownie.");
+      gameState.enteredPin = [];
+      if(myRole === 'haker') {
+        broadcastGameState();
+      }
+      render();
+    }
+  }
+
+  function triggerWinState() {
+    clearInterval(timerInterval);
+    alert("SUKCES! System zabezpieczeń zhakowany poprawnie.");
+    location.reload();
+  }
+
+  function scoutToggleConfirm() {
+    gameState.scoutConfirmed = !gameState.scoutConfirmed;
+    if(myRole === 'zwiadowca') {
+      if(hostConn && hostConn.open) {
+        hostConn.send({ type: 'SCOUT_CONFIRM', confirmed: gameState.scoutConfirmed });
+      }
+    }
+    render();
+  }
+
+  function render() {
+    const contentBox = document.getElementById('moduleContent');
+
+    if (myRole === 'haker') {
+      if(!gameState.scoutConfirmed) {
+        document.getElementById('moduleTitle').innerText = "SEKWENCJA SYMBOLI";
+        let symbolsHtml = '';
+        if(gameState.symbols && gameState.symbols.length > 0) {
+          gameState.symbols.forEach(sym => {
+            symbolsHtml += `<div class="symbol-box">${sym}</div>`;
+          });
+        }
+        contentBox.innerHTML = `
+          <div style="font-size:12px; color:#4dd8ff; margin-bottom:15px; letter-spacing:1px;">● ODCZYT AKTYWNY — OCZEKIWANIE NA ZWIADOWCĘ</div>
+          <div class="symbols-row">${symbolsHtml}</div>
+          <div style="font-size:11px; color:#8b949e;">Haker • kanał ECHO • dane aktywnej sesji</div>`;
+      } else {
+        document.getElementById('moduleTitle').innerText = "Terminal & Panel PIN";
+        let pinSlotsHtml = '';
+        for(let i=0; i<4; i++) {
+          let val = gameState.enteredPin[i] !== undefined ? gameState.enteredPin[i] : '•';
+          pinSlotsHtml += `<div class="pin-slot">${val}</div>`;
+        }
+        contentBox.innerHTML = `
+          <div style="font-size:11px; color:#8b949e; margin-bottom:5px;">Wprowadź 4-cyfrowy kod PIN:</div>
+          <div class="pin-display">${pinSlotsHtml}</div>
+          <div class="keypad-grid">
+            <button class="key-btn" onclick="pressKey(1)">1</button>
+            <button class="key-btn" onclick="pressKey(2)">2</button>
+            <button class="key-btn" onclick="pressKey(3)">3</button>
+            <button class="key-btn" onclick="pressKey(4)">4</button>
+            <button class="key-btn" onclick="pressKey(5)">5</button>
+            <button class="key-btn" onclick="pressKey(6)">6</button>
+            <button class="key-btn" onclick="pressKey(7)">7</button>
+            <button class="key-btn" onclick="pressKey(8)">8</button>
+            <button class="key-btn" onclick="pressKey(9)">9</button>
+            <button class="key-btn action" onclick="clearPin()">WYCZYŚĆ</button>
+            <button class="key-btn" onclick="pressKey(0)">0</button>
+            <button class="key-btn action" onclick="submitPin()">ZATWIERDŹ</button>
+          </div>`;
+      }
+
+    } else if (myRole === 'zwiadowca') {
+      document.getElementById('moduleTitle').innerText = "Protokół Awaryjny";
+      let btnText = gameState.scoutConfirmed ? "Cofnij (Nie znam jeszcze PINu)" : "Znam już PIN";
+      let btnStyle = gameState.scoutConfirmed ? "background:#da3633; color:#fff;" : "background:#1f6feb; color:#fff;";
+      
+      let dirText = gameState.ruleDir === 'zgodnie' ? 'Zgodnie z wskazówkami' : 'Przeciwnie do wskazówek';
+      
+      contentBox.innerHTML = `
+        <div class="doc-grid" style="margin-bottom: 10px;">
+          <div class="doc-card"><div class="label">Punkt początkowy</div><div class="val">Pozycja ${gameState.ruleStart || 1}</div></div>
+          <div class="doc-card"><div class="label">Kierunek odczytu</div><div class="val">${dirText}</div></div>
+          <div class="doc-card"><div class="label">Krok (skok)</div><div class="val">Co ${gameState.ruleStep || 1} symbol</div></div>
+          <div class="doc-card"><div class="label">Korekta cyfry</div><div class="val">Dodaj +${gameState.ruleAdd || 1} i weź ostatnią</div></div>
+          <div class="doc-card" style="grid-column: span 2;"><div class="label">Cel misji</div><div class="val" style="color:#4dd8ff;">Ostateczny PIN składa się dokładnie z 4 cyfr</div></div>
+        </div>
+        <button onclick="scoutToggleConfirm()" style="padding: 10px 20px; border: none; border-radius: 6px; font-family: 'Teko'; font-size: 20px; cursor: pointer; ${btnStyle}">${btnText}</button>`;
+
+    } else if (myRole === 'technik') {
+      document.getElementById('moduleTitle').innerText = "Tablica Mapowania";
+      let html = `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; width:100%; max-width:400px; max-height: 320px; overflow-y: auto;">`;
+      if(gameState.mapping) {
+        for (let sym in gameState.mapping) {
+          html += `<div style="background:#131822; border:1px solid #1f2937; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:18px;"><span style="color:#facc15;">${sym}</span><span style="color:#e6edf3; font-weight:bold;">${gameState.mapping[sym]}</span></div>`;
+        }
+      }
+      html += `</div>`;
+      contentBox.innerHTML = html;
+    }
+  }
+</script>
+
+</body>
+</html>
