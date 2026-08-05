@@ -1,5 +1,4 @@
 global.activeKeys = global.activeKeys || ["PALETO2026", "VIP-ACCESS"];
-// Przechowuje mapowanie: klucz -> identyfikator urządzenia (IP + User-Agent)
 global.keyBindings = global.keyBindings || {};
 
 export default async function handler(req, res) {
@@ -19,7 +18,6 @@ export default async function handler(req, res) {
 
   const { action, key, adminPass } = req.body;
   
-  // Wyciąganie IP klienta (Vercel przekazuje prawdziwe IP w nagłówkach)
   const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown_ip';
   const userAgent = req.headers['user-agent'] || 'unknown_agent';
   const deviceId = `${clientIP}_${Buffer.from(userAgent).toString('base64').substring(0, 15)}`;
@@ -28,7 +26,7 @@ export default async function handler(req, res) {
   const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
   const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
-  // 1. GENEROWANIE KLUCZA
+  // 1. GENEROWANIE KLUCZA (Wysyła tylko na Discord, nie oddaje klucza do przeglądarki)
   if (action === 'generate') {
     if (adminPass !== "lxowqxeqxwekopxqwkoq") { 
       return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
@@ -36,7 +34,7 @@ export default async function handler(req, res) {
 
     const randomPart1 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const newKey = `PALETO-${randomPart1}-${randomPart2}`; 
+    const newKey = `KEY-${randomPart1}-${randomPart2}`; // Zmienione na KEY- lub możesz dać co chcesz
     
     global.activeKeys.push(newKey);
 
@@ -48,7 +46,8 @@ export default async function handler(req, res) {
       });
     } catch(e) {}
 
-    return res.status(200).json({ success: true, key: newKey });
+    // Zwracamy czysty sukces bez podawania klucza w odpowiedzi
+    return res.status(200).json({ success: true, message: "Klucz został wygenerowany i wysłany na Discord!" });
   }
 
   // 2. WERYFIKACJA I PRZYPISANIE DO URZĄDZENIA
@@ -65,13 +64,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
     }
 
-    // Sprawdzenie czy klucz jest już przypisany do kogoś innego
     if (global.keyBindings[key]) {
       if (global.keyBindings[key] !== deviceId) {
         return res.status(400).json({ success: false, message: "Ten klucz jest przypisany do innego urządzenia!" });
       }
     } else {
-      // Pierwsze użycie - przypisujemy do tego urządzenia
       global.keyBindings[key] = deviceId;
     }
 
