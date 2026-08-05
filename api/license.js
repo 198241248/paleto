@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
   const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
-  // GENEROWANIE KLUCZA
+  // GENEROWANIE KLUCZA + LOG NA DISCORD
   if (action === 'generate') {
     if (adminPass !== "ADMIN123") {
       return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
@@ -32,12 +32,22 @@ export default async function handler(req, res) {
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const newKey = `PALETO-${randomPart1}-${randomPart2}`;
     
+    // Zapis w pamięci (bazie)
     global.activeKeys.push(newKey);
+
+    // Wysłanie logu na Discord o wygenerowaniu klucza
+    try {
+      await fetch(WEBHOOK_SUCCESS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: `🔑 **Wygenerowano nowy klucz o ${loginTime}**\n> Klucz: \`${newKey}\`` })
+      });
+    } catch(e) {}
 
     return res.status(200).json({ success: true, key: newKey });
   }
 
-  // WERYFIKACJA KLUCZA
+  // WERYFIKACJA KLUCZA (TYLKO JEDEN UŻYTEK)
   if (action === 'verify') {
     if (!global.activeKeys.includes(key)) {
       try {
@@ -51,17 +61,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
     }
 
+    // Sprawdzenie czy klucz już został zużyty
     if (global.usedKeys.includes(key)) {
       return res.status(400).json({ success: false, message: "Ten klucz został już wykorzystany!" });
     }
 
+    // Oznaczenie klucza jako zużyty
     global.usedKeys.push(key);
 
     try {
       await fetch(WEBHOOK_SUCCESS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `✅ **Nowe logowanie o godzinie ${loginTime}**\n> Użyty klucz: \`${key}\`` })
+        body: JSON.stringify({ content: `✅ **Nowe udane logowanie o godzinie ${loginTime}**\n> Użyty klucz: \`${key}\`` })
       });
     } catch(e) {}
 
