@@ -72,11 +72,18 @@
 
     if (!inputVal) return;
 
+    // Pobieramy informacje o systemie/przeglądarce użytkownika
+    const deviceInfo = navigator.userAgent;
+
     try {
       const response = await fetch('/api/license', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', key: inputVal })
+        body: JSON.stringify({ 
+          action: 'verify', 
+          key: inputVal,
+          clientInfo: deviceInfo 
+        })
       });
       const data = await response.json();
 

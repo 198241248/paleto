@@ -2,7 +2,6 @@ global.activeKeys = global.activeKeys || ["PALETO2026", "VIP-ACCESS"];
 global.usedKeys = global.usedKeys || [];
 
 export default async function handler(req, res) {
-  // Obsługa żądań CORS, gdyby była potrzebna
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -17,12 +16,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, key, adminPass } = req.body;
+  const { action, key, adminPass, clientInfo } = req.body;
   const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+
+  // Wyciąganie adresu IP użytkownika bezpośrednio z serwera Vercela
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Nieznane IP';
 
   // AKCJA 1: GENEROWANIE KLUCZA
   if (action === 'generate') {
-    // Sprawdzenie hasła admina (akceptuje też zapasowe "ADMIN123")
     if (adminPass !== process.env.ADMIN_SECRET_PASS && adminPass !== "ADMIN123") {
       return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
     }
@@ -39,18 +40,16 @@ export default async function handler(req, res) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content: `🛠️ **Wygenerowano nowy klucz licencyjny!**\n> Klucz: \`${newKey}\``
+            content: `🛠️ **Wygenerowano nowy klucz licencyjny!**\n> Klucz: \`${newKey}\`\n> IP Admina: \`${ip}\``
           })
         });
-      } catch (err) {
-        console.error("Webhook error:", err);
-      }
+      } catch (err) {}
     }
 
     return res.status(200).json({ success: true, key: newKey });
   }
 
-  // AKCJA 2: WERYFIKACJA KLUCZA
+  // AKCJA 2: WERYFIKACIJA KLUCZA + LOGI
   if (action === 'verify') {
     if (!global.activeKeys.includes(key)) {
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
@@ -62,18 +61,23 @@ export default async function handler(req, res) {
 
     global.usedKeys.push(key);
 
+    // Pobieramy aktualną godzinę w Polsce
+    const loginTime = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
+
     if (DISCORD_WEBHOOK_URL) {
       try {
         await fetch(DISCORD_WEBHOOK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content: `🔑 **Użyto klucza licencyjnego!**\n> Klucz: \`${key}\``
+            content: `🚨 **UDANE LOGOWANIE DO SYSTEMU!**\n` +
+                     `> 🔑 Klucz: \`${key}\`\n` +
+                     `> 🌐 Adres IP: \`${ip}\`\n` +
+                     `> 💻 Urządzenie/Przeglądarka: \`${clientInfo || 'Standardowa sesja'}\`\n` +
+                     `> ⏰ Godzina: \`${loginTime}\``
           })
         });
-      } catch (err) {
-        console.error("Webhook error:", err);
-      }
+      } catch (err) {}
     }
 
     return res.status(200).json({ success: true, message: "Licencja aktywowana!" });
