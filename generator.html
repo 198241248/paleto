@@ -40,7 +40,10 @@
   </div>
 
 <script>
-  function generateKey() {
+  const BIN_ID = "6a733b99da38895dfebd0a93";
+  const JSONBIN_SECRET = "$2a$10$ChextWmp4vw2kLAt5Z7//OoHNEuc.ozVujwVwlv67Z4L7HNYcAbaO";
+
+  async function generateKey() {
     let adminPassInput = prompt("Podaj hasło administratora (domyślnie: ADMIN123):");
     if (!adminPassInput) return;
 
@@ -51,15 +54,37 @@
 
     const randomPart1 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const newKey = `PALETO-${randomPart1}-${randomPart2}`;
+    const newKeyStr = `PALETO-${randomPart1}-${randomPart2}`;
 
-    document.getElementById('keyOutput').innerText = newKey;
-    navigator.clipboard.writeText(newKey);
-    alert("Klucz wygenerowany i skopiowany do schowka!\n(Pamiętaj, aby dopisać go do tablicy validKeys w index.html, jeśli chcesz, żeby działał).");
+    try {
+      const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+        headers: { 'X-Master-Key': JSONBIN_SECRET }
+      });
+      const result = await response.json();
+      let keysData = result.record.keys || [];
+
+      keysData.push({ key: newKeyStr, usedBy: null });
+
+      await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': JSONBIN_SECRET
+        },
+        body: JSON.stringify({ keys: keysData })
+      });
+
+      document.getElementById('keyOutput').innerText = newKeyStr;
+      navigator.clipboard.writeText(newKeyStr);
+      alert("Klucz został wygenerowany i automatycznie dodany do bazy!\nSkopiowano do schowka: " + newKeyStr);
+
+    } catch (e) {
+      alert("Błąd zapisu klucza do bazy danych.");
+    }
   }
 
   function copyKey() {
-    const keyText = document.getElementById('keyOutput').innerText;
+    const keyText = document.getElementById('keyOutput'].innerText;
     if (keyText !== "Brak klucza") {
       navigator.clipboard.writeText(keyText);
       alert("Skopiowano klucz do schowka: " + keyText);
