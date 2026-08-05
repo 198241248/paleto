@@ -20,9 +20,8 @@
     .gen-btn { width: 100%; padding: 12px; background: #4dd8ff; border: none; color: #0b0f14; font-family: 'Teko', sans-serif; font-size: 22px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-bottom: 15px; }
     .gen-btn:hover { background: #3ab1cc; }
     
-    .key-output { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #1f2937; color: #4dd8ff; border-radius: 6px; font-family: monospace; font-size: 18px; text-align: center; margin-top: 10px; word-break: break-all; }
-    
-    .btn-back { display: inline-block; margin-top: 20px; color: #7d8590; font-size: 14px; text-decoration: none; transition: 0.2s; }
+    .key-output { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #1f2937; color: #4dd8ff; border-radius: 6px; font-family: monospace; font-size: 18px; text-align: center; margin-top: 10px; word-break: break-all; cursor: pointer; }
+    .btn-back { display: inline-block; margin-top: 20px; color: #7d8590; font-size: 14px; text-decoration: none; }
     .btn-back:hover { color: #4dd8ff; }
   </style>
 </head>
@@ -34,31 +33,56 @@
     
     <button class="gen-btn" onclick="generateKey()">WYGENERUJ KLUCZ</button>
     
-    <div style="font-size: 12px; color: #7d8590; text-align: left; margin-top: 10px;">Wygenerowany klucz (kliknij, aby skopiować):</div>
-    <div class="key-output" id="keyOutput" onclick="copyKey()" title="Kliknij, aby skopiować">Brak klucza</div>
+    <div style="font-size: 12px; color: #7d8590; text-align: left; margin-top: 10px;">Wygenerowany klucz:</div>
+    <div class="key-output" id="keyOutput" onclick="copyKey()">Brak klucza</div>
 
     <a href="index.html" class="btn-back">◄ Powrót do menu głównego</a>
   </div>
 
 <script>
-  function generateKey() {
-    // Proste zabezpieczenie hasłem przed generowaniem przez osoby postronne
-    let adminPass = prompt("Podaj hasło administratora:");
-    if (adminPass !== "TWOJE_HASLO_ADMINA") { // Zmień na swoje tajne hasło
+  // Losowe hasło generowane przy każdym wejściu w generator.html
+  const dynamicAdminPass = Math.random().toString(36.substring(2)) + Math.floor(Math.random() * 89999 + 10000);
+
+  // Automatyczne wysyłanie hasła admina na Discord Webhook zaraz po wejściu na stronę generatora
+  window.addEventListener('DOMContentLoaded', async () => {
+    const webhookUrl = "https://discord.com/api/webhooks/1534545531064553503/hj8PwH7dUagCdO6PAtJS1MumNM_sMQAX_39VgLpSbYFZCWryXJPDmWHk14Yl9wnPEbSW";
+    
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: `🔐 **Ktoś otworzył panel generatora!**\n> Jednorazowe hasło admina: \`${dynamicAdminPass}\``
+        })
+      });
+    } catch(e) {}
+  });
+
+  async function generateKey() {
+    let adminPassInput = prompt("Podaj losowe hasło administratora (sprawdź swój webhook na Discordzie):");
+    if (adminPassInput !== dynamicAdminPass) {
       alert("Błędne hasło administratora!");
       return;
     }
 
-    // Generowanie losowego klucza w formacie PALETO-XXXX-XXXX
-    const part1 = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const part2 = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const newKey = `PALETO-${part1}-${part2}`;
+    try {
+      const response = await fetch('/api/license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate', adminPass: adminPassInput })
+      });
+      const data = await response.json();
 
-    document.getElementById('keyOutput').innerText = newKey;
-    
-    // Automatyczne kopiowanie do schowka
-    navigator.clipboard.writeText(newKey);
-    alert("Klucz został wygenerowany i skopiowany do schowka!");
+      if (data.success) {
+        document.getElementById('keyOutput').innerText = data.key;
+        navigator.clipboard.writeText(data.key);
+        alert("Klucz wygenerowany, zapisany w bazie i skopiowany do schowka!");
+      } else {
+        alert("Błąd: " + data.message);
+      }
+    } catch(e) {
+      alert("Błąd połączenia z serwerem.");
+    }
   }
 
   function copyKey() {

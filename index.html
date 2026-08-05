@@ -13,7 +13,6 @@
     to { opacity: 1; transform: scale(1); }
   }
 
-  /* PANEL LOGOWANIA */
   .auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0f14; display: flex; justify-content: center; align-items: center; z-index: 1000; }
   .auth-box { background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 30px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8); animation: fadeScaleIn 0.3s ease-out; }
   .auth-title { font-family: 'Teko', sans-serif; font-size: 36px; color: #4dd8ff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
@@ -24,28 +23,21 @@
   .auth-btn:hover { background: #3ab1cc; }
   .auth-error { color: #da3633; font-size: 13px; margin-top: 10px; display: none; }
 
-  /* GŁÓWNA TREŚĆ (UKRYTA DOPÓKI BRAK SESJI) */
   .main-content-wrapper { display: none; width: 100%; justify-content: center; }
-
   .selection-screen { text-align: center; max-width: 1000px; width: 100%; padding: 20px; animation: fadeScaleIn 0.3s ease-out; }
   .selection-title { font-family: 'Teko', sans-serif; font-size: 56px; letter-spacing: 3px; color: #4dd8ff; text-shadow: 0 0 20px rgba(77,216,255,0.3); text-transform: uppercase; margin-bottom: 5px; }
   .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 20px; }
   .hack-card { background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 25px; cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); text-align: left; position: relative; text-decoration: none; display: block; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
   .hack-card:hover:not(.disabled) { border-color: #4dd8ff; transform: translateY(-5px); box-shadow: 0 8px 24px rgba(77,216,255,0.15); }
-  
   .hack-card h3 { font-family: 'Teko', sans-serif; font-size: 28px; color: #4dd8ff; margin-bottom: 0px; line-height: 24px; }
   .hack-card p { font-size: 13px; color: #8b949e; line-height: 1.4; margin-top: -4px; }
-  
   .hack-card.disabled { opacity: 0.35; cursor: not-allowed; border-color: #1f2937; }
   .badge-soon { position: absolute; top: 15px; right: 15px; background: #1f2937; color: #8b949e; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
-  
   .btn-logout { position: absolute; top: 20px; right: 20px; background: #131822; border: 1px solid #1f2937; color: #da3633; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 18px; cursor: pointer; transition: 0.2s; }
-  .btn-logout:hover { background: #1a2332; border-color: #da3633; }
 </style>
 </head>
 <body>
 
-  <!-- OKNO LOGOWANIA / LICENCJI -->
   <div class="auth-overlay" id="authOverlay">
     <div class="auth-box">
       <div class="auth-title">DOSTĘP DO SYSTEMU</div>
@@ -56,68 +48,50 @@
     </div>
   </div>
 
-  <!-- GŁÓWNA ZAWARTOŚĆ STRONY -->
   <div class="main-content-wrapper" id="mainContent">
     <button class="btn-logout" onclick="logout()">WYLOGUJ</button>
     <div class="selection-screen">
       <div class="selection-title">MENU GŁÓWNE</div>
-      
       <div class="cards-grid">
-        <a href="paleto.html" class="hack-card">
-          <h3>BANK PALETO</h3>
-          <p>* Tryb wieloosobowy</p>
-        </a>
-        
-        <a href="maze.html" class="hack-card">
-          <h3>BANK MAZE</h3>
-          <p>* Tryb wieloosobowy</p>
-        </a>
-
-        <a href="kasyno.html" class="hack-card disabled">
-          <span class="badge-soon">Wkrótce</span>
-          <h3>KASYNO</h3>
-        </a>
-
-        <a href="sekwencja.html" class="hack-card">
-          <h3>SEKWENCJA BANK PALETO</h3>
-        </a>
-
-        <a href="pine.html" class="hack-card">
-          <h3>BANK PINE</h3>
-        </a>
-
-        <a href="villa.html" class="hack-card">
-          <h3>VILLA</h3>
-        </a>
-
-        <a href="konwoj.html" class="hack-card">
-          <h3>KONWOJ WOJSKOWY</h3>
-        </a>
-
-        <div class="hack-card disabled">
-          <h3>AMMUNATION</h3>
-          <span class="badge-soon">Wkrótce</span>
-        </div>
+        <a href="paleto.html" class="hack-card"><h3>BANK PALETO</h3><p>* Tryb wieloosobowy</p></a>
+        <a href="maze.html" class="hack-card"><h3>BANK MAZE</h3><p>* Tryb wieloosobowy</p></a>
+        <a href="kasyno.html" class="hack-card disabled"><span class="badge-soon">Wkrótce</span><h3>KASYNO</h3></a>
+        <a href="sekwencja.html" class="hack-card"><h3>SEKWENCJA BANK PALETO</h3></a>
+        <a href="pine.html" class="hack-card"><h3>BANK PINE</h3></a>
+        <a href="villa.html" class="hack-card"><h3>VILLA</h3></a>
+        <a href="konwoj.html" class="hack-card"><h3>KONWOJ WOJSKOWY</h3></a>
+        <div class="hack-card disabled"><h3>AMMUNATION</h3><span class="badge-soon">Wkrótce</span></div>
       </div>
     </div>
   </div>
 
 <script>
-  // Zdefiniuj poprawne klucze (możesz dodać ich więcej lub zmienić)
-  const validLicenses = ["PALETO2026", "VIP-ACCESS", "TESTKEY"];
-
-  function checkLicense() {
+  async function checkLicense() {
     const inputVal = document.getElementById('licenseInput').value.trim();
     const errorEl = document.getElementById('authError');
 
-    if (validLicenses.includes(inputVal)) {
-      // Zapisujemy w sesji przeglądarki informację o zalogowaniu
-      sessionStorage.setItem('paleto_auth', 'true');
-      document.getElementById('authOverlay').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'flex';
-    } else {
+    if (!inputVal) return;
+
+    try {
+      const response = await fetch('/api/license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', key: inputVal })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        sessionStorage.setItem('paleto_auth', 'true');
+        document.getElementById('authOverlay').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'flex';
+      } else {
+        errorEl.innerText = data.message || "Błędny lub wykorzystany klucz!";
+        errorEl.style.display = 'block';
+        document.getElementById('licenseInput').value = '';
+      }
+    } catch (e) {
+      errorEl.innerText = "Błąd połączenia z serwerem.";
       errorEl.style.display = 'block';
-      document.getElementById('licenseInput').value = '';
     }
   }
 
@@ -126,25 +100,12 @@
     location.reload();
   }
 
-  // Sprawdzanie przy starcie strony (oraz na podstronach, jeśli wkleisz ten skrypt również tam)
   window.addEventListener('DOMContentLoaded', () => {
-    const isAuthed = sessionStorage.getItem('paleto_auth');
-    const path = window.location.pathname;
-    
-    // Jeśli użytkownik jest na podstronie innej niż index (np. /paleto.html) i NIE ma sesji:
-    if (!isAuthed && !path.endsWith('index.html') && path !== '/' && path !== '') {
-      alert("Brak autoryzacji! Zaloguj się najpierw.");
-      window.location.href = 'index.html';
-      return;
-    }
-
-    // Jeśli jest na index.html i ma sesję, od razu pokazujemy menu
-    if (isAuthed && (path.endsWith('index.html') || path === '/' || path === '')) {
+    if (sessionStorage.getItem('paleto_auth') === 'true') {
       document.getElementById('authOverlay').style.display = 'none';
       document.getElementById('mainContent').style.display = 'flex';
     }
   });
 </script>
-
 </body>
 </html>
