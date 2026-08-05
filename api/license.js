@@ -16,11 +16,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, key, adminPass, clientInfo } = req.body;
+  const { action, key, adminPass } = req.body;
   const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-
-  // Bezpieczne wyciąganie IP
-  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Nieznane IP';
 
   // AKCJA 1: GENEROWANIE KLUCZA
   if (action === 'generate') {
@@ -40,18 +37,16 @@ export default async function handler(req, res) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content: `🛠️ **Wygenerowano nowy klucz licencyjny!**\n> Klucz: \`${newKey}\`\n> IP Admina: \`${ip}\``
+            content: `🛠️ **Wygenerowano nowy klucz licencyjny!**\n> Klucz: \`${newKey}\``
           })
         });
-      } catch (err) {
-        console.error("Błąd wysyłania webhooka (generate):", err);
-      }
+      } catch (err) {}
     }
 
     return res.status(200).json({ success: true, key: newKey });
   }
 
-  // AKCJA 2: WERYFIKACIJA KLUCZA + LOGI
+  // AKCJA 2: WERYFIKACJA KLUCZA + PROSTE LOGO NA DISCORDZIE
   if (action === 'verify') {
     if (!global.activeKeys.includes(key)) {
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
@@ -63,32 +58,19 @@ export default async function handler(req, res) {
 
     global.usedKeys.push(key);
 
-    const loginTime = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
+    // Pobieramy aktualną godzinę
+    const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
-    // SPRAWDZENIE CZY WEBHOOK JEST W OGÓLE USTAWIONY
-    if (!DISCORD_WEBHOOK_URL) {
-      console.error("BŁĄD: Zmienna środowiskowa DISCORD_WEBHOOK_URL nie jest ustawiona na Vercelu!");
-    } else {
+    if (DISCORD_WEBHOOK_URL) {
       try {
-        const discordResponse = await fetch(DISCORD_WEBHOOK_URL, {
+        await fetch(DISCORD_WEBHOOK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content: `🚨 **UDANE LOGOWANIE DO SYSTEMU!**\n` +
-                     `> 🔑 Klucz: \`${key}\`\n` +
-                     `> 🌐 Adres IP: \`${ip}\`\n` +
-                     `> 💻 Urządzenie: \`${clientInfo || 'Brak danych'}\`\n` +
-                     `> ⏰ Godzina:  \`${loginTime}\``
+            content: `🔓 **Nowe logowanie o godzinie ${loginTime}**\n> Użyty klucz: \`${key}\``
           })
         });
-        
-        if (!discordResponse.ok) {
-          const errText = await discordResponse.text();
-          console.error("Discord odrzucił webhook:", errText);
-        }
-      } catch (err) {
-        console.error("Wyjątek podczas wysyłania na Discorda:", err);
-      }
+      } catch (err) {}
     }
 
     return res.status(200).json({ success: true, message: "Licencja aktywowana!" });
