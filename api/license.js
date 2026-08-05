@@ -19,8 +19,8 @@ export default async function handler(req, res) {
   const { action, key, adminPass, clientInfo } = req.body;
   const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
-  // Pobieranie IP użytkownika z nagłówków Vercela
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Nieznane IP';
+  // Bezpieczne wyciąganie IP
+  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Nieznane IP';
 
   // AKCJA 1: GENEROWANIE KLUCZA
   if (action === 'generate') {
@@ -43,7 +43,9 @@ export default async function handler(req, res) {
             content: `🛠️ **Wygenerowano nowy klucz licencyjny!**\n> Klucz: \`${newKey}\`\n> IP Admina: \`${ip}\``
           })
         });
-      } catch (err) {}
+      } catch (err) {
+        console.error("Błąd wysyłania webhooka (generate):", err);
+      }
     }
 
     return res.status(200).json({ success: true, key: newKey });
@@ -63,20 +65,30 @@ export default async function handler(req, res) {
 
     const loginTime = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
-    if (DISCORD_WEBHOOK_URL) {
+    // SPRAWDZENIE CZY WEBHOOK JEST W OGÓLE USTAWIONY
+    if (!DISCORD_WEBHOOK_URL) {
+      console.error("BŁĄD: Zmienna środowiskowa DISCORD_WEBHOOK_URL nie jest ustawiona na Vercelu!");
+    } else {
       try {
-        await fetch(DISCORD_WEBHOOK_URL, {
+        const discordResponse = await fetch(DISCORD_WEBHOOK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             content: `🚨 **UDANE LOGOWANIE DO SYSTEMU!**\n` +
                      `> 🔑 Klucz: \`${key}\`\n` +
                      `> 🌐 Adres IP: \`${ip}\`\n` +
-                     `> 💻 Urządzenie/Przeglądarka: \`${clientInfo || 'Brak danych'}\`\n` +
+                     `> 💻 Urządzenie: \`${clientInfo || 'Brak danych'}\`\n` +
                      `> ⏰ Godzina: \`${loginTime}\``
           })
         });
-      } catch (err) {}
+        
+        if (!discordResponse.ok) {
+          const errText = await discordResponse.text();
+          console.error("Discord odrzucił webhook:", errText);
+        }
+      } catch (err) {
+        console.error("Wyjątek podczas wysyłania na Discorda:", err);
+      }
     }
 
     return res.status(200).json({ success: true, message: "Licencja aktywowana!" });
