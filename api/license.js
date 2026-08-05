@@ -78,7 +78,7 @@ export default async function handler(req, res) {
                      `> 🔑 Klucz: \`${key}\`\n` +
                      `> 🌐 Adres IP: \`${ip}\`\n` +
                      `> 💻 Urządzenie: \`${clientInfo || 'Brak danych'}\`\n` +
-                     `> ⏰ Godzina: \`${loginTime}\``
+                     `> ⏰ Godzina:  \`${loginTime}\``
           })
         });
         
