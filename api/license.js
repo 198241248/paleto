@@ -15,11 +15,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, key, adminPass } = req.body;
+  // TUTAJ DODANO ODBIERANIE deviceId Z REQ.BODY
+  const { action, key, adminPass, deviceId } = req.body;
   
   const userAgent = req.headers['user-agent'] || 'unknown_agent';
 
-  const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534552834865889443/RShDnyLUsf4T9_34u8Zd6lryFuuAsd0PgDQbMKfqhwRRgowiHLp3R0_h2mzIm-XLKl-3";
+  const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534882495869358120/0eFxGWjV8QjA7StGFXE7xWSI9_gn6DD_KmNWwZOCpj_mF5Q1UvnapZS3xMJpgPwIT9Se";
   const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
   const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
@@ -42,7 +43,6 @@ export default async function handler(req, res) {
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const newKey = `KEY-${randomPart1}-${randomPart2}`;
     
-    // Zapisujemy nowy klucz w bazie KV (pusty boundDevice oznacza, że jeszcze nikt go nie użył)
     await kv.hset(`key:${newKey}`, { boundDevice: null });
 
     try {
@@ -58,7 +58,6 @@ export default async function handler(req, res) {
 
   // 2. WERYFIKACJA I PRZYPISANIE DO URZĄDZENIA
   if (action === 'verify') {
-    // Sprawdzamy czy klucz istnieje w bazie KV
     const keyData = await kv.hgetall(`key:${key}`);
 
     if (!keyData) {
@@ -66,7 +65,7 @@ export default async function handler(req, res) {
         await fetch(WEBHOOK_FAILED, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: `❌ **Błędna próba logowania o ${loginTime}**\`\n> Klucz: \`${key}\`` })
+          body: JSON.stringify({ content: `❌ **Błędna próba logowania o ${loginTime}**\n> Klucz: \`${key}\`` })
         });
       } catch(e) {}
 
@@ -75,19 +74,19 @@ export default async function handler(req, res) {
 
     // Sprawdzamy powiązanie urządzenia
     if (keyData.boundDevice) {
-      if (keyData.boundDevice !== deviceId) {
+      if (deviceId && keyData.boundDevice !== deviceId) {
         return res.status(400).json({ success: false, message: "Ten klucz jest przypisany do innego urządzenia!" });
       }
     } else {
-      // Jeśli klucz nie miał jeszcze urządzenia, przypisujemy obecne
-      await kv.hset(`key:${key}`, { boundDevice: deviceId });
+      // Jeśli klucz nie miał jeszcze urządzenia, przypisujemy obecne (jeśli zostało przesłane)
+      await kv.hset(`key:${key}`, { boundDevice: deviceId || 'unknown' });
     }
 
     try {
       await fetch(WEBHOOK_SUCCESS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `✅ **Udane logowanie o ${loginTime}**\`\n> Klucz: \`${key}\`` })
+        body: JSON.stringify({ content: `✅ **Udane logowanie o ${loginTime}**\n> Klucz: \`${key}\`` })
       });
     } catch(e) {}
 
