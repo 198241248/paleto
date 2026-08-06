@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Sejf mazebank</title>
+  <title>MazeBank Sejfik - Paleto</title>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -46,12 +46,13 @@
     #g6-marker { position: absolute; top: 0; height: 100%; width: 4px; border-radius: 2px; background: #f0b429; box-shadow: 0 0 10px rgba(240,180,41,0.8); }
     #g6-space-label { text-align: center; box-sizing: border-box; width: 100%; background: rgba(240,180,41,0.1); border: 1px solid rgba(240,180,41,0.3); color: #f0b429; border-radius: 6px; padding: 10px 20px; font-family: 'Teko', sans-serif; font-size: 20px; letter-spacing: 2px; }
 
-    /* Ekran powiadomień w stylu Digital Den / Success-Fail */
+    /* Ekran powiadomień i ekran startowy */
     #statusOverlay { position: absolute; inset: 0; background: rgba(13, 17, 23, 0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; z-index: 10; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
     #statusOverlay.show { opacity: 1; pointer-events: auto; }
     #statusTitle { font-family: 'Teko', sans-serif; font-size: 48px; letter-spacing: 2px; text-transform: uppercase; }
     #statusTitle.success { color: #2ea043; text-shadow: 0 0 20px rgba(46,160,67,0.6); }
     #statusTitle.fail { color: #ff4d4d; text-shadow: 0 0 20px rgba(255,77,77,0.6); }
+    #statusTitle.start { color: #f0b429; text-shadow: 0 0 20px rgba(240,180,41,0.6); font-size: 38px; text-align: center; line-height: 1.1; }
     #statusSub { font-size: 14px; color: #8b949e; letter-spacing: 0.5px; }
   `;
   document.head.appendChild(style);
@@ -69,9 +70,9 @@
       </div>
       <div class="inner-screen" id="innerScreen">
         
-        <div id="statusOverlay">
-          <div id="statusTitle">HACK UDANY</div>
-          <div id="statusSub">Sejf został otwarty pomyślnie.</div>
+        <div id="statusOverlay" class="show">
+          <div id="statusTitle" class="start">MAZEBANK SEJFIK</div>
+          <div id="statusSub">WCIŚNIJ [ SPACJA ] ABY ROZPOCZĄĆ</div>
         </div>
 
         <div id="g6-wrap">
@@ -130,7 +131,8 @@
   let zoneLeft = 0, zoneW = 0;
   let rafId = null;
   let lastTs = null;
-  let gameActive = true;
+  let gameActive = false;
+  let waitingToStart = true;
 
   const barEl = document.getElementById('g6-bar');
   const zoneEl = document.getElementById('g6-zone');
@@ -198,8 +200,8 @@
     rafId = requestAnimationFrame(loop);
   }
 
-  function initGame() {
-    cancelAnimationFrame(rafId);
+  function startGame() {
+    waitingToStart = false;
     statusOverlay.classList.remove('show');
     measure();
     hits = 0;
@@ -231,13 +233,21 @@
       playTone(140, 0.35, 'sawtooth');
     }
 
-    // Automatyczny restart po 2 sekundach pokazania ekranu wynikowego
+    // Powrót do ekranu startowego po 2 sekundach
     setTimeout(() => {
-      initGame();
+      waitingToStart = true;
+      statusTitle.textContent = "MAZEBANK SEJFIK";
+      statusTitle.className = "start";
+      statusSub.textContent = "WCIŚNIJ [ SPACJA ] ABY ROZPOCZĄĆ";
     }, 2000);
   }
 
   function tryPressSpace() {
+    if (waitingToStart) {
+      startGame();
+      return;
+    }
+
     if (!gameActive || statusOverlay.classList.contains('show')) return;
 
     if (isMarkerInZone()) {
@@ -273,10 +283,9 @@
     measure();
   });
 
-  // Start gry
+  // Inicjalizacja pomiaru przy załadowaniu
   window.onload = () => {
     measure();
-    initGame();
   };
 </script>
 
