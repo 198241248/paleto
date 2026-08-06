@@ -36,6 +36,16 @@
   </div>
 
 <script>
+  // Pobieramy lub tworzymy unikalne ID tego konkretnego urządzenia/przeglądarki
+  function getDeviceId() {
+    let deviceId = localStorage.getItem('paleto_device_id');
+    if (!deviceId) {
+      deviceId = 'dev_' + Math.random().toString(36).substring(2) + Date.now();
+      localStorage.setItem('paleto_device_id', deviceId);
+    }
+    return deviceId;
+  }
+
   async function generateKey() {
     let adminPassInput = prompt("Podaj hasło administratora:");
     if (!adminPassInput) return;
@@ -44,7 +54,11 @@
       const response = await fetch('/api/license', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate', adminPass: adminPassInput })
+        body: JSON.stringify({ 
+          action: 'generate', 
+          adminPass: adminPassInput,
+          deviceId: getDeviceId() 
+        })
       });
       const data = await response.json();
 
