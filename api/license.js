@@ -89,7 +89,7 @@ export default async function handler(req, res) {
       await fetch(WEBHOOK_SUCCESS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `✅ **Udane logowanie o ${loginTime}**\`\n> Klucz: \`${key}\`` })
+        body: JSON.stringify({ content: `✅ **Udane logowanie o ${loginTime}**\n> Klucz: \`${newKey}\`` })
       });
     } catch(e) {}
 
