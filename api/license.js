@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   const userAgent = req.headers['user-agent'] || 'unknown_agent';
   const deviceId = `${clientIP}_${Buffer.from(userAgent).toString('base64').substring(0, 15)}`;
 
-  const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534552834865889443/RShDnyLUsf4T9_34u8Zd6lryFuuAsd0PgDQbMKfqhwRRgowiHLp3R0_h2mzIm-XLKl-3";
+  const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534882495869358120/0eFxGWjV8QjA7StGFXE7xWSI9_gn6DD_KmNWwZOCpj_mF5Q1UvnapZS3xMJpgPwIT9Se";
   const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
   const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
