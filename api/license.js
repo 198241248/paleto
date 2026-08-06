@@ -1,5 +1,4 @@
-global.activeKeys = global.activeKeys || ["PALETO2026", "VIP-ACCESS"];
-global.keyBindings = global.keyBindings || {};
+import { kv } from '@vercel/kv';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -26,6 +25,15 @@ export default async function handler(req, res) {
   const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
   const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
+  // Inicjalizacja domyślnych kluczy w bazie, jeśli jeszcze ich nie ma
+  const defaultKeys = ["PALETO2026", "VIP-ACCESS"];
+  for (const defKey of defaultKeys) {
+    const exists = await kv.exists(`key:${defKey}`);
+    if (!exists) {
+      await kv.hset(`key:${defKey}`, { boundDevice: null });
+    }
+  }
+
   // 1. GENEROWANIE KLUCZA
   if (action === 'generate') {
     if (adminPass !== "lxowqxeqxwekopxqwkoq") { 
@@ -36,7 +44,8 @@ export default async function handler(req, res) {
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const newKey = `KEY-${randomPart1}-${randomPart2}`;
     
-    global.activeKeys.push(newKey);
+    // Zapisujemy nowy klucz w bazie KV (pusty boundDevice oznacza, że jeszcze nikt go nie użył)
+    await kv.hset(`key:${newKey}`, { boundDevice: null });
 
     try {
       await fetch(WEBHOOK_SUCCESS, {
@@ -46,12 +55,15 @@ export default async function handler(req, res) {
       });
     } catch(e) {}
 
-    return res.status(200).json({ success: true, key: newKey, message: "Klucz został wygenerowany pomyślnie!" });
+    return res.status(200).json({ success: true, message: "Klucz został wygenerowany i wysłany na Discorda!" });
   }
 
   // 2. WERYFIKACJA I PRZYPISANIE DO URZĄDZENIA
   if (action === 'verify') {
-    if (!global.activeKeys.includes(key)) {
+    // Sprawdzamy czy klucz istnieje w bazie KV
+    const keyData = await kv.hgetall(`key:${key}`);
+
+    if (!keyData) {
       try {
         await fetch(WEBHOOK_FAILED, {
           method: 'POST',
@@ -63,12 +75,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
     }
 
-    if (global.keyBindings[key]) {
-      if (global.keyBindings[key] !== deviceId) {
+    // Sprawdzamy powiązanie urządzenia
+    if (keyData.boundDevice) {
+      if (keyData.boundDevice !== deviceId) {
         return res.status(400).json({ success: false, message: "Ten klucz jest przypisany do innego urządzenia!" });
       }
     } else {
-      global.keyBindings[key] = deviceId;
+      // Jeśli klucz nie miał jeszcze urządzenia, przypisujemy obecne
+      await kv.hset(`key:${key}`, { boundDevice: deviceId });
     }
 
     try {
