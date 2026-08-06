@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Ammunation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<script>
+  // Weryfikacja sesji - NASZE LOGOWANIE
+  if (sessionStorage.getItem('paleto_auth') !== 'true') {
+    alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
+    window.location.href = 'index.html';
+  }
+
+  // Konfiguracja dla Etapu 1 (Lockpick / Koło)
+  const CONFIG_GAME2 = {
+    ROTATION_SPEED_DEG_PER_SEC: 90,
+    GRAY_WIDTH_DEG: 28,  
+    WHITE_WIDTH_DEG: 10, 
+    MAX_ROTATIONS: 3,
+    ZONE_COUNT: 1,
+    NEEDLE_LENGTH_RATIO: 0.95,
+    ROUNDS: 3
+  };
+
+  // Konfiguracja dla Etapu 2 (Safe Cracker / Słuchowy)
+  const CONFIG_GAME10 = {
+    TIME_LIMIT: 30,
+    ROUNDS: 3,
+    POSITION_MIN: 0,
+    POSITION_MAX: 100,
+    KEY_REPEAT_DELAY: 250,
+    KEY_REPEAT_INTERVAL: 60,
+    CLICK_ZONE_MIN: 15,
+    CLICK_ZONE_MAX: 25,
+    BLISKO_ZONE_MIN: 4,
+    BLISKO_ZONE_MAX: 8
+  };
+
+  // 1. Wstrzykiwanie stylów CSS
+  const style = document.createElement('style');
+  style.innerHTML = `
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; background-image: radial-gradient(#1f2937 2px, transparent 2px); background-size: 25px 25px; }
+
+    @keyframes fadeScaleIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .btn-back { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; text-decoration: none; transition: 0.2s; z-index: 10; cursor: pointer; }
+    .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
+
+    /* MENU */
+    .menu-screen { text-align: center; max-width: 600px; width: 100%; padding: 20px; animation: fadeScaleIn 0.3s ease-out; z-index: 2; display: block; }
+    .selection-title { font-family: 'Teko', sans-serif; font-size: 48px; letter-spacing: 3px; color: #4dd8ff; text-shadow: 0 0 20px rgba(77,216,255,0.3); text-transform: uppercase; margin-bottom: 5px; }
+    .stages-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 25px; }
+    .stage-card { background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 20px; text-align: left; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .stage-card:hover { border-color: #4dd8ff; background: #1a2332; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(77,216,255,0.15); }
+    .stage-info h3 { font-family: 'Teko', sans-serif; font-size: 28px; color: #4dd8ff; line-height: 24px; }
+    .stage-info p { font-size: 13px; color: #8b949e; margin-top: 4px; }
+    .stage-action { font-family: 'Teko', sans-serif; font-size: 20px; background: #4dd8ff; color: #0b0f14; padding: 6px 16px; border-radius: 6px; font-weight: bold; }
+
+    /* KONTENER GŁÓWNY MINIGIER */
+    .game-container { display: none; width: 880px; max-width: 88vw; background: #131822; border: 2px solid #1f2937; border-radius: 12px; padding: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; animation: fadeScaleIn 0.3s ease-out; z-index: 2; }
+    .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
+    .game-title { font-family: 'Teko', sans-serif; font-size: 26px; color: #4dd8ff; text-transform: uppercase; }
+    .btn-menu { background: #21262d; border: 1px solid #1f2937; color: #fff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: 'Teko', sans-serif; font-size: 16px; transition: 0.2s; }
+    .btn-menu:hover { border-color: #4dd8ff; }
+
+    .view { position: relative; width: 100%; height: 360px; display: none; }
+    .view.active { display: block; }
+
+    /* WIDOK ETAP 1 (LOCKPICK / KOŁO) */
+    #app2 { position: relative; height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #101A2A, #0B1320); border: 1px solid #22344D; border-radius: 12px; box-shadow: 0 30px 70px rgba(0,0,0,0.55); overflow: hidden; }
+    
+    #g2-rounds-wrap { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 5; }
+    .g2-pip { width: 50px; height: 8px; border-radius: 6px; background: #1A2738; border: 1px solid #31465E; transition: 0.25s; }
+    .g2-pip.current { background: #ffffff; border-color: #ffffff; box-shadow: 0 0 10px rgba(255,255,255,0.6); }
+    .g2-pip.done { background: #44D37A; border-color: #44D37A; box-shadow: 0 0 10px rgba(68,211,122,0.4); }
+
+    #dial-wrap { position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
+    #dial-wrap svg { width: 100%; height: 100%; }
+    #dial-center-label { position: absolute; font-family: 'Teko', sans-serif; font-size: 20px; color: #8b949e; letter-spacing: 1px; bottom: 35px; }
+
+    /* WIDOK ETAP 2 (SAFE CRACKER) */
+    #app10 { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
+    #g10-panel { position: relative; width: 100%; height: 100%; background: linear-gradient(180deg, #101A2A, #0B1320); border: 1px solid #22344D; border-radius: 12px; box-shadow: 0 30px 70px rgba(0,0,0,0.55); display: flex; flex-direction: row; overflow: hidden; }
+    #g10-timebar-wrap { position: absolute; top: 0; left: 0; right: 0; height: 6px; background: #182334; border-radius: 6px 6px 0 0; overflow: hidden; }
+    #g10-timebar { height: 100%; width: 100%; background: linear-gradient(90deg, #45C3FF, #6FDFFF); border-radius: 6px; transition: width 0.1s linear; }
+    #g10-timer { position: absolute; top: 18px; right: 25px; font-size: 24px; font-weight: 300; color: #ffffff; letter-spacing: 1px; }
+    #g10-left { width: 55%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; box-sizing: border-box; padding-top: 16px; }
+    #g10-circle-wrap { position: relative; width: 220px; height: 220px; border-radius: 50%; background: #101C2D; border: 8px solid #4EC8FF; box-shadow: 0 0 22px rgba(78,200,255,0.45); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    #g10-needle-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+    #g10-needle { transition: transform 0.08s linear; transform-origin: 110px 110px; filter: drop-shadow(0 0 4px rgba(78,200,255,0.7)); }
+    #g10-position { position: relative; z-index: 2; font-size: 96px; font-weight: 800; color: #ffffff; line-height: 1; letter-spacing: -2px; }
+    #g10-rounds { display: flex; gap: 10px; }
+    #g10-rounds .g10-pip { width: 60px; height: 8px; border-radius: 6px; background: #1A2738; border: 1px solid #31465E; transition: background 0.25s, border-color 0.25s, box-shadow 0.25s; }
+    #g10-rounds .g10-pip.current { background: #ffffff; border-color: #ffffff; box-shadow: 0 0 10px rgba(255,255,255,0.6); }
+    #g10-rounds .g10-pip.done { background: #44D37A; border-color: #44D37A; }
+    #g10-right { width: 45%; height: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; box-sizing: border-box; }
+    #g10-right::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1px; height: 260px; background: #22344D; }
+    #g10-status-wrap { text-align: center; }
+    #g10-status-label { font-size: 13px; font-weight: 600; color: #7D8EA4; letter-spacing: 2px; }
+    #g10-status { font-size: 42px; font-weight: 700; color: #ffffff; margin-top: 6px; transition: opacity 0.12s ease; white-space: pre-line; line-height: 1.15; }
+    #g10-status-sub { font-size: 14px; color: #A7B4C3; margin-top: 8px; transition: opacity 0.12s ease; }
+    #g10-controls { text-align: center; font-size: 15px; color: #A7B4C3; display: flex; flex-direction: column; gap: 6px; }
+    #g10-controls .g10-key { display: inline-block; min-width: 20px; padding: 2px 7px; margin-right: 6px; border: 1px solid #31465E; border-radius: 5px; background: #141F30; color: #e8f6ff; font-size: 12px; }
+
+    /* OVERLAY */
+    .overlay { position: absolute; inset: 0; background: rgba(11, 15, 20, 0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; text-align: center; padding: 20px; border-radius: 10px; }
+    .overlay.show { opacity: 1; pointer-events: auto; }
+    .overlay h1 { font-family: 'Teko', sans-serif; font-size: 42px; letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.1; }
+    .overlay h1.win { color: #2ea043; text-shadow: 0 0 15px rgba(46,160,67,0.5); }
+    .overlay h1.lose { color: #ff4d4d; text-shadow: 0 0 15px rgba(255,77,77,0.5); }
+    .overlay p { font-size: 14px; color: #8b949e; letter-spacing: 0.5px; }
+    .overlay .hint { font-family: 'Teko', sans-serif; font-size: 26px; color: #4dd8ff; text-transform: uppercase; letter-spacing: 1px; animation: pulseHint 1.5s infinite alternate; }
+    .overlay .countdown { font-family: 'Teko', sans-serif; font-size: 64px; color: #ffffff; line-height: 1; }
+    .overlay button { margin-top: 10px; background: #4dd8ff; border: none; color: #0b0f14; font-family: 'Teko', sans-serif; font-size: 22px; padding: 6px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .overlay button:hover { background: #3bc2ef; transform: scale(1.05); }
+
+    @keyframes pulseHint {
+      from { opacity: 0.6; }
+      to { opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // 2. Dynamiczna struktura HTML
+  document.body.innerHTML = `
+    <button class="btn-back" id="btnBack">◄ WYLOGUJ</button>
+
+    <div class="menu-screen" id="menuScreen">
+      <div class="selection-title">AMMUNATION</div>
+      
+      <div class="stages-grid">
+        <div class="stage-card" id="stage1Card">
+          <div class="stage-info">
+            <h3>ETAP 1: GABLOTKI</h3>
+            <p>Musisz zaliczyć 3 pozycje, zatrzymując czerwoną wskazówkę spacjią.</p>
+          </div>
+          <div class="stage-action">START</div>
+        </div>
+        <div class="stage-card" id="stage2Card">
+          <div class="stage-info">
+            <h3>ETAP 2: KASETKI</h3>
+            <p>Zgadnij główny kod szyfrujący skarbiec (nasłuchuj kliknięć).</p>
+          </div>
+          <div class="stage-action">START</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-container" id="gameContainer">
+      <div class="game-header">
+        <div class="game-title" id="gameTitle">ETAP</div>
+        <button class="btn-menu" id="btnReturnMenu">WYBÓR ETAPÓW</button>
+      </div>
+      <div id="gameViewport">
+        <!-- ETAP 1 (LOCKPICK) -->
+        <div id="view-game2" class="view">
+          <div id="app2">
+            <div id="g2-rounds-wrap"></div>
+            <div id="dial-wrap">
+              <svg viewBox="0 0 320 320">
+                <circle cx="160" cy="160" r="130" stroke="rgba(255,255,255,0.55)" stroke-width="6" fill="none"/>
+                <g id="zonesGroup"></g>
+                <line id="needle" x1="160" y1="160" x2="160" y2="30" stroke="#ff3b3b" stroke-width="5" stroke-linecap="round"/>
+                <circle cx="160" cy="160" r="9" fill="#ff3b3b"/>
+              </svg>
+              <div id="dial-center-label">SPACJA</div>
+            </div>
+          </div>
+          <div id="overlay2" class="overlay">
+            <h1 id="overlayTitle2"></h1>
+            <p id="overlaySub2"></p>
+            <div id="overlayHint2" class="hint" style="display:none;"></div>
+            <div id="overlayCountdown2" class="countdown" style="display:none;"></div>
+            <button id="restartBtn2">SPRÓBUJ PONOWNIE</button>
+          </div>
+        </div>
+
+        <!-- ETAP 2 (SAFE CRACKER) -->
+        <div id="view-game10" class="view">
+          <div id="app10">
+            <div id="g10-panel">
+              <div id="g10-timebar-wrap"><div id="g10-timebar"></div></div>
+              <div id="g10-timer">30</div>
+              <div id="g10-left">
+                <div id="g10-circle-wrap">
+                  <svg id="g10-needle-svg" viewBox="0 0 220 220">
+                    <line id="g10-needle" x1="110" y1="110" x2="110" y2="34" stroke="#4EC8FF" stroke-width="4" stroke-linecap="round"/>
+                    <circle cx="110" cy="110" r="6" fill="#4EC8FF"/>
+                  </svg>
+                  <div id="g10-position">50</div>
+                </div>
+                <div id="g10-rounds"></div>
+              </div>
+              <div id="g10-right">
+                <div id="g10-status-wrap">
+                  <div id="g10-status-label">STATUS</div>
+                  <div id="g10-status">SZUKAJ</div>
+                  <div id="g10-status-sub">Znajdź poprawną pozycję.</div>
+                </div>
+                <div id="g10-controls">
+                  <div><span class="g10-key">&larr;</span>Obrót w lewo</div>
+                  <div><span class="g10-key">&rarr;</span>Obrót w prawo</div>
+                  <div><span class="g10-key">SPACE</span>Potwierdź</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="overlay10" class="overlay">
+            <h1 id="overlayTitle10"></h1>
+            <p id="overlaySub10"></p>
+            <div id="overlayHint10" class="hint" style="display:none;"></div>
+            <div id="overlayCountdown10" class="countdown" style="display:none;"></div>
+            <button id="restartBtn10">SPRÓBUJ PONOWNIE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Audio Context
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playTone(freq, duration, type = 'sine') {
+    try {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  }
+  playTone.ctx = audioCtx;
+
+  const TEXT_WIN = "SUKCES";
+  const TEXT_LOSE = "PUDŁO";
+  const TEXT_HINT = "Naciśnij SPACE aby rozpocząć";
+
+  let currentView = null;
+
+  document.getElementById('btnBack').addEventListener('click', (e) => {
+    e.preventDefault();
+    if(document.getElementById('gameContainer').style.display === 'block') {
+      returnToMenu();
+    } else {
+      sessionStorage.removeItem('paleto_auth');
+      window.location.href = 'index.html';
+    }
+  });
+
+  window.returnToMenu = function() {
+    document.getElementById('gameContainer').style.display = 'none';
+    document.getElementById('menuScreen').style.display = 'block';
+    document.getElementById('btnBack').textContent = '◄ WYLOGUJ';
+    
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    currentView = null;
+
+    Game2.stop();
+    Game10.stop();
+  }
+
+  window.startStage = function(stageNum) {
+    document.getElementById('menuScreen').style.display = 'none';
+    document.getElementById('gameContainer').style.display = 'block';
+    document.getElementById('btnBack').textContent = '◄ POWRÓT';
+    
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+    if(stageNum === 1) {
+      document.getElementById('gameTitle').textContent = "ETAP 1: ZAMEK / LOCKPICK";
+      document.getElementById('view-game2').classList.add('active');
+      currentView = 'view-game2';
+      Game2.goToStartScreen();
+    } else if(stageNum === 2) {
+      document.getElementById('gameTitle').textContent = "ETAP 2: KASETKA / SEJF";
+      document.getElementById('view-game10').classList.add('active');
+      currentView = 'view-game10';
+      Game10.goToStartScreen();
+    }
+  }
+
+  document.getElementById('stage1Card').addEventListener('click', () => startStage(1));
+  document.getElementById('stage2Card').addEventListener('click', () => startStage(2));
+  document.getElementById('btnReturnMenu').addEventListener('click', returnToMenu);
+
+
+  // ================================================================
+  //   GRA 2 — LOCKPICK
+  // ================================================================
+  const Game2 = (function(){
+    const overlay = document.getElementById('overlay2');
+    const overlayTitle = document.getElementById('overlayTitle2');
+    const overlaySub = document.getElementById('overlaySub2');
+    const overlayHint = document.getElementById('overlayHint2');
+    const overlayCountdown = document.getElementById('overlayCountdown2');
+    const restartBtn = document.getElementById('restartBtn2');
+
+    const zonesGroup = document.getElementById('zonesGroup');
+    const needle = document.getElementById('needle');
+    const roundsWrap = document.getElementById('g2-rounds-wrap');
+
+    let ROT_SPEED = CONFIG_GAME2.ROTATION_SPEED_DEG_PER_SEC;
+    let GRAY_WIDTH = CONFIG_GAME2.GRAY_WIDTH_DEG;
+    let WHITE_WIDTH = CONFIG_GAME2.WHITE_WIDTH_DEG;
+    let MAX_ROTATIONS = CONFIG_GAME2.MAX_ROTATIONS;
+    let ZONE_COUNT = CONFIG_GAME2.ZONE_COUNT;
+    let TOTAL_ROUNDS = CONFIG_GAME2.ROUNDS;
+
+    const R = 130;
+    const CIRC = 2*Math.PI*R;
+    const NEEDLE_LEN = R * CONFIG_GAME2.NEEDLE_LENGTH_RATIO;
+    needle.setAttribute('y2', String(160 - NEEDLE_LEN));
+
+    let angle = 0;
+    let direction = 1;
+    let totalTraveled = 0;
+    let zones = [];
+    let rafId = null;
+    let lastTs = null;
+    let gameOver = false;
+    let waitingForSpace = false;
+    let roundRunning = false;
+    let waitingForRestart = false;
+    
+    let currentRound = 0;
+
+    function buildRoundsUI(){
+      roundsWrap.innerHTML = '';
+      for(let i=0; i<TOTAL_ROUNDS; i++){
+        const el = document.createElement('div');
+        el.className = 'g2-pip' + (i===0 ? ' current' : '');
+        roundsWrap.appendChild(el);
+      }
+    }
+
+    function updateRoundsUI(idx){
+      const pips = roundsWrap.children;
+      for(let i=0; i<TOTAL_ROUNDS; i++){
+        if(!pips[i]) continue;
+        pips[i].className = 'g2-pip' + (i<idx ? ' done' : (i===idx ? ' current' : ''));
+      }
+    }
+
+    function makeArcEl(color, glow){
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('cx','160'); el.setAttribute('cy','160'); el.setAttribute('r', String(R));
+      el.setAttribute('stroke', color); el.setAttribute('stroke-width','30');
+      el.setAttribute('fill','none'); el.setAttribute('stroke-linecap','butt');
+      if(glow) el.style.filter = 'drop-shadow(0 0 6px ' + glow + ')';
+      return el;
+    }
+
+    function setArc(circleEl, startDeg, widthDeg){
+      const arcLen = CIRC * (widthDeg/360);
+      circleEl.setAttribute('stroke-dasharray', arcLen + ' ' + (CIRC-arcLen));
+      circleEl.setAttribute('transform', 'rotate(' + (startDeg-90) + ' 160 160)');
+    }
+
+    function inArc(a, start, width){
+      const end = (start+width) % 360;
+      if(start <= end) return a >= start && a <= end;
+      return a >= start || a <= end;
+    }
+
+    function checkHit(){
+      const norm = ((angle % 360)+360) % 360;
+      for(const z of zones){
+        if(inArc(norm, z.whiteStart, WHITE_WIDTH)) return 'white';
+      }
+      for(const z of zones){
+        if(inArc(norm, z.zoneStart, GRAY_WIDTH)) return 'gray';
+      }
+      return null;
+    }
+
+    function tryPressSpace(){
+      if(gameOver || !roundRunning) return;
+      const hit = checkHit();
+      
+      if(hit === 'white' || hit === 'gray'){
+        playTone(hit === 'white' ? 990 : 660, 0.15, 'square');
+        currentRound++;
+        updateRoundsUI(currentRound);
+
+        if(currentRound >= TOTAL_ROUNDS) {
+          winGame('Otwarto zamek!');
+        } else {
+          cancelAnimationFrame(rafId);
+          roundRunning = false;
+          setTimeout(() => {
+            if(gameOver) return;
+            prepareRound(false);
+            beginRound();
+          }, 600);
+        }
+      } else {
+        failGame('Naciśnięto spację poza polem.');
+      }
+    }
+
+    function failGame(reason){
+      if(gameOver) return;
+      gameOver = true; roundRunning = false;
+      playTone(140, 0.35, 'sawtooth');
+      cancelAnimationFrame(rafId);
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      overlayTitle.textContent = TEXT_LOSE;
+      overlayTitle.className = 'lose';
+      overlaySub.textContent = reason;
+      overlay.classList.add('show');
+      waitingForRestart = true;
+    }
+
+    function winGame(reason){
+      gameOver = true; roundRunning = false;
+      playTone(660,0.15,'sine'); setTimeout(()=>playTone(990,0.2,'sine'),150);
+      cancelAnimationFrame(rafId);
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      overlayTitle.textContent = TEXT_WIN;
+      overlayTitle.className = 'win';
+      overlaySub.textContent = reason;
+      overlay.classList.add('show');
+      waitingForRestart = true;
+
+      setTimeout(() => {
+        returnToMenu();
+      }, 1500);
+    }
+
+    function loop(ts){
+      if(gameOver || !roundRunning) return;
+      if(lastTs === null) lastTs = ts;
+      const dt = (ts-lastTs)/1000; lastTs = ts;
+
+      const delta = ROT_SPEED * dt;
+      angle = (angle + delta*direction + 360) % 360;
+      totalTraveled += delta;
+      needle.setAttribute('transform', 'rotate(' + angle + ' 160 160)');
+
+      if(totalTraveled >= MAX_ROTATIONS*360){
+        failGame('Za dużo obrotów — nie trafiono na czas.');
+        return;
+      }
+
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function setZonesVisible(visible){
+      zonesGroup.style.opacity = visible ? '1' : '0';
+    }
+
+    function placeZones(){
+      zonesGroup.innerHTML = '';
+      zones = [];
+      const placedStarts = [];
+      const minGap = GRAY_WIDTH + 14;
+      const needleGap = 35; 
+
+      function angularDistToArc(a, start, width){
+        const rel = ((a - start) % 360 + 360) % 360;
+        if(rel <= width) return 0;
+        return Math.min(rel - width, 360 - rel);
+      }
+      function isValidStart(zoneStart){
+        const overlapsOther = placedStarts.some(s => {
+          const diff = Math.abs(((zoneStart - s + 540) % 360) - 180);
+          return diff < minGap;
+        });
+        const tooCloseToNeedle = angularDistToArc(angle, zoneStart, GRAY_WIDTH) < needleGap;
+        return !overlapsOther && !tooCloseToNeedle;
+      }
+      for(let i=0;i<ZONE_COUNT;i++){
+        let zoneStart = Math.random()*360, attempts = 0, found = false;
+        while(attempts < 30){
+          zoneStart = Math.random()*360;
+          attempts++;
+          if(isValidStart(zoneStart)){ found = true; break; }
+        }
+        if(!found){
+          let best = null, bestDist = -1;
+          for(let deg=0; deg<360; deg+=2){
+            const dist = angularDistToArc(angle, deg, GRAY_WIDTH);
+            if(dist > bestDist){ bestDist = dist; best = deg; }
+          }
+          zoneStart = best !== null ? best : zoneStart;
+        }
+        placedStarts.push(zoneStart);
+        const whiteAtStart = Math.random() < 0.5;
+        const whiteStart = whiteAtStart ? zoneStart : (zoneStart + GRAY_WIDTH - WHITE_WIDTH + 360) % 360;
+        const grayEl = makeArcEl('#c3c9d1', 'rgba(200,210,220,0.55)');
+        const whiteEl = makeArcEl('#ffffff', 'rgba(255,255,255,0.9)');
+        zonesGroup.appendChild(grayEl);
+        zonesGroup.appendChild(whiteEl);
+        setArc(grayEl, zoneStart, GRAY_WIDTH);
+        setArc(whiteEl, whiteStart, WHITE_WIDTH);
+        zones.push({ zoneStart, whiteStart, grayEl, whiteEl });
+      }
+    }
+
+    function prepareRound(fullReset = true){
+      cancelAnimationFrame(rafId);
+      if(fullReset) {
+        currentRound = 0;
+        buildRoundsUI();
+      }
+      angle = Math.random()*360; 
+      totalTraveled = 0;
+      direction = Math.random() < 0.5 ? 1 : -1;
+      gameOver = false; roundRunning = false; lastTs = null;
+      zonesGroup.style.transition = 'none';
+      zonesGroup.style.opacity = '0';
+      void zonesGroup.getBoundingClientRect();
+      zonesGroup.style.transition = '';
+      placeZones();
+      setZonesVisible(false);
+      needle.setAttribute('transform', 'rotate(' + angle + ' 160 160)');
+    }
+
+    function beginRound(){
+      roundRunning = true;
+      setZonesVisible(true);
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function showSpacePrompt(){
+      overlayTitle.textContent = ''; overlaySub.textContent = '';
+      overlayHint.textContent = TEXT_HINT;
+      overlayHint.style.display = 'block';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'none';
+      overlay.classList.add('show');
+      waitingForSpace = true;
+    }
+
+    function startCountdownThenBegin(){
+      waitingForSpace = false;
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'block';
+      overlayCountdown.textContent = '1';
+      setTimeout(()=>{ overlay.classList.remove('show'); beginRound(); }, 1000);
+    }
+
+    function goToStartScreen(){ waitingForRestart = false; prepareRound(true); showSpacePrompt(); }
+    
+    function stop(){
+      cancelAnimationFrame(rafId);
+      roundRunning = false; waitingForSpace = false; waitingForRestart = false; gameOver = true;
+      overlay.classList.remove('show');
+    }
+
+    restartBtn.addEventListener('click', goToStartScreen);
+
+    window.addEventListener('keydown', (e)=>{
+      if(currentView !== 'view-game2') return;
+      if(waitingForSpace && (e.code==='Space' || e.key===' ')){
+        e.preventDefault(); startCountdownThenBegin(); return;
+      }
+      if(waitingForRestart && (e.code==='Space' || e.key===' ')){
+        e.preventDefault(); goToStartScreen(); return;
+      }
+      if(roundRunning && (e.code==='Space' || e.key===' ')){
+        e.preventDefault(); tryPressSpace();
+      }
+    });
+
+    return { goToStartScreen, stop };
+  })();
+
+
+  // ================================================================
+  //   GRA 10 — SAFE CRACKER (Naprawiono błąd przeskakiwania wskazówki)
+  // ================================================================
+  const Game10 = (function(){
+    const overlay = document.getElementById('overlay10');
+    const overlayTitle = document.getElementById('overlayTitle10');
+    const overlaySub = document.getElementById('overlaySub10');
+    const overlayHint = document.getElementById('overlayHint10');
+    const overlayCountdown = document.getElementById('overlayCountdown10');
+    const restartBtn = document.getElementById('restartBtn10');
+
+    const timebarEl = document.getElementById('g10-timebar');
+    const timerEl = document.getElementById('g10-timer');
+    const positionEl = document.getElementById('g10-position');
+    const needleEl = document.getElementById('g10-needle');
+    const roundsWrap = document.getElementById('g10-rounds');
+    const statusEl = document.getElementById('g10-status');
+    const statusSubEl = document.getElementById('g10-status-sub');
+
+    let TIME_LIMIT = CONFIG_GAME10.TIME_LIMIT;
+    let ROUNDS = CONFIG_GAME10.ROUNDS;
+    const POS_MIN = CONFIG_GAME10.POSITION_MIN;
+    const POS_MAX = CONFIG_GAME10.POSITION_MAX;
+    const KEY_REPEAT_DELAY = CONFIG_GAME10.KEY_REPEAT_DELAY;
+    const KEY_REPEAT_INTERVAL = CONFIG_GAME10.KEY_REPEAT_INTERVAL;
+    const CLICK_ZONE_MIN = CONFIG_GAME10.CLICK_ZONE_MIN;
+    const CLICK_ZONE_MAX = CONFIG_GAME10.CLICK_ZONE_MAX;
+    const BLISKO_ZONE_MIN = CONFIG_GAME10.BLISKO_ZONE_MIN;
+    const BLISKO_ZONE_MAX = CONFIG_GAME10.BLISKO_ZONE_MAX;
+
+    let round = 0, target = 50, current = 50, timeLeft = TIME_LIMIT;
+    let clickZone = CLICK_ZONE_MIN, bliskoZone = BLISKO_ZONE_MIN;
+    let rafId = null, lastTs = null, gameOver = false, roundRunning = false;
+    let waitingForSpace = false, waitingForRestart = false;
+
+    function randInt(min, max){ return min + Math.floor(Math.random()*(max-min+1)); }
+
+    function playClick(){
+      try{
+        const ctx = playTone.ctx || (playTone.ctx = new (window.AudioContext||window.webkitAudioContext)());
+        if(ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 950;
+        gain.gain.value = 0.35;
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
+        osc.stop(ctx.currentTime + 0.06);
+      }catch(e){}
+    }
+
+    function wrapPos(v){
+      const range = POS_MAX - POS_MIN + 1;
+      return ((v - POS_MIN) % range + range) % range + POS_MIN;
+    }
+
+    function distance(){ return Math.abs(target - current); }
+
+    let clickTimerId = null, clickToken = 0;
+    function stopClickScheduler(){
+      clickToken++;
+      if(clickTimerId){ clearTimeout(clickTimerId); clickTimerId = null; }
+    }
+    function scheduleNextClick(){
+      clickToken++;
+      const myToken = clickToken;
+      if(clickTimerId){ clearTimeout(clickTimerId); clickTimerId = null; }
+      if(gameOver || !roundRunning) return;
+      const dist = distance();
+      if(dist > clickZone) return;
+      const base = 0.08 + (dist/clickZone) * 0.6;
+      const delay = Math.max(0.03, base) * 1000;
+      clickTimerId = setTimeout(()=>{
+        if(myToken !== clickToken || gameOver || !roundRunning) return;
+        playClick();
+        scheduleNextClick();
+      }, delay);
+    }
+
+    function setStatus(text, sub){
+      statusEl.textContent = text;
+      statusSubEl.textContent = sub;
+    }
+
+    function updateStatusForDistance(){
+      if(distance() <= bliskoZone){
+        setStatus('BLISKO', 'Nasłuchuj kliknięć.');
+      } else {
+        setStatus('SZUKAJ', 'Znajdź poprawną pozycję.');
+      }
+    }
+
+    function buildRounds(){
+      roundsWrap.innerHTML = '';
+      for(let i=0; i<ROUNDS; i++){
+        const el = document.createElement('div');
+        el.className = 'g10-pip' + (i===0 ? ' current' : '');
+        roundsWrap.appendChild(el);
+      }
+    }
+
+    function setRound(idx){
+      const pips = roundsWrap.children;
+      for(let i=0; i<ROUNDS; i++){
+        if(!pips[i]) continue;
+        pips[i].className = 'g10-pip' + (i<idx ? ' done' : (i===idx ? ' current' : ''));
+      }
+    }
+
+    function setupRoundData(keepCurrent = false){
+      target = randInt(POS_MIN, POS_MAX);
+      clickZone = randInt(CLICK_ZONE_MIN, CLICK_ZONE_MAX);
+      bliskoZone = randInt(BLISKO_ZONE_MIN, BLISKO_ZONE_MAX);
+      
+      // Jeśli keepCurrent jest true, NIE zmieniamy 'current'. 
+      // Dodatkowo upewniamy się, że wylosowany nowy 'target' nie jest wylosowany tak nieszczęśliwie,
+      // że po zatwierdzeniu nagle przeskoczymy dźwiękiem/dystansem (chociaż current zostaje w miejscu).
+      if(!keepCurrent){
+        current = wrapPos(target + randInt(30, 70));
+      }
+      updateUI();
+    }
+
+    function failGame(reason){
+      if(gameOver) return;
+      gameOver = true; roundRunning = false;
+      playTone(140, 0.35, 'sawtooth');
+      cancelAnimationFrame(rafId);
+      stopClickScheduler();
+      
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      overlayTitle.textContent = TEXT_LOSE;
+      overlayTitle.className = 'lose';
+      overlaySub.textContent = reason;
+      overlay.classList.add('show');
+      waitingForRestart = true;
+    }
+
+    function winGame(reason){
+      gameOver = true; roundRunning = false;
+      playTone(660,0.15,'sine'); setTimeout(()=>playTone(990,0.2,'sine'),150);
+      cancelAnimationFrame(rafId);
+      stopClickScheduler();
+      
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      overlayTitle.textContent = TEXT_WIN;
+      overlayTitle.className = 'win';
+      overlaySub.textContent = reason;
+      overlay.classList.add('show');
+      waitingForRestart = true;
+
+      setTimeout(() => {
+        returnToMenu();
+      }, 1500);
+    }
+
+    function loop(ts){
+      if(gameOver || !roundRunning) return;
+      if(lastTs === null) lastTs = ts;
+      const dt = (ts-lastTs)/1000; lastTs = ts;
+
+      timeLeft -= dt;
+      if(timeLeft <= 0){
+        timeLeft = 0;
+        failGame('Czas minął!');
+      }
+      updateTimerUI();
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function updateTimerUI(){
+      timerEl.textContent = Math.ceil(timeLeft);
+      const pct = Math.max(0, timeLeft/TIME_LIMIT)*100;
+      timebarEl.style.width = pct + '%';
+      if(pct < 20) timebarEl.style.background = 'linear-gradient(90deg, #FF4545, #FF6F6F)';
+      else timebarEl.style.background = 'linear-gradient(90deg, #45C3FF, #6FDFFF)';
+    }
+
+    function updateUI(){
+      positionEl.textContent = ('0'+current).slice(-2);
+      const range = POS_MAX - POS_MIN + 1;
+      const pct = (current - POS_MIN) / range;
+      needleEl.style.transform = 'rotate(' + (pct*360) + 'deg)';
+      updateStatusForDistance();
+    }
+
+    function movePosition(dir, single){
+      if(gameOver || !roundRunning) return;
+      current = wrapPos(current + dir);
+      updateUI();
+      if(single) stopClickScheduler(); 
+      scheduleNextClick();
+    }
+
+    function tryPressSpace(){
+      if(gameOver || !roundRunning) return;
+      if(current === target){
+        round++;
+        playTone(990, 0.15, 'square');
+        setRound(round);
+        if(round >= ROUNDS){
+          winGame('Otwarto sejf!');
+        } else {
+          setStatus('DOBRZE', 'Szukaj dalej...');
+          stopClickScheduler();
+          
+          // Zablokuj chwilowo możliwość poruszania, żeby użytkownik nie popsuł stanu przed wylosowaniem nowego celu
+          roundRunning = false; 
+
+          setTimeout(()=>{
+            if(gameOver) return;
+            // Generujemy nowy cel (target), ale zachowujemy obecną pozycję wskazówki (current).
+            // Używamy pętli, aby upewnić się, że nowy target nie zepsuje płynności (opcjonalnie: dajemy mu nowy target).
+            setupRoundData(true);
+            roundRunning = true;
+            scheduleNextClick();
+          }, 600);
+        }
+      } else {
+        failGame('Błędna pozycja!');
+      }
+    }
+
+    function prepareRound(){
+      cancelAnimationFrame(rafId); stopClickScheduler();
+      round = 0; timeLeft = TIME_LIMIT; gameOver = false; roundRunning = false; lastTs = null;
+      buildRounds(); setRound(0); setupRoundData(false); updateTimerUI();
+    }
+
+    function beginRound(){
+      roundRunning = true; scheduleNextClick(); rafId = requestAnimationFrame(loop);
+    }
+
+    function showSpacePrompt(){
+      overlayTitle.textContent = ''; overlaySub.textContent = '';
+      overlayHint.textContent = TEXT_HINT;
+      overlayHint.style.display = 'block';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'none';
+      overlay.classList.add('show');
+      waitingForSpace = true;
+    }
+
+    function startCountdownThenBegin(){
+      waitingForSpace = false;
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'block';
+      overlayCountdown.textContent = '1';
+      setTimeout(()=>{ overlay.classList.remove('show'); beginRound(); }, 1000);
+    }
+
+    function goToStartScreen(){ waitingForRestart = false; prepareRound(); showSpacePrompt(); }
+    
+    function stop(){
+      cancelAnimationFrame(rafId);
+      stopClickScheduler();
+      roundRunning = false; waitingForSpace = false; waitingForRestart = false; gameOver = true;
+      if(overlay) overlay.classList.remove('show');
+    }
+
+    if(restartBtn) restartBtn.addEventListener('click', goToStartScreen);
+
+    let heldDir = null, repeatDelayId = null, repeatIntervalId = null;
+
+    function stopRepeat(){
+      if(repeatDelayId){ clearTimeout(repeatDelayId); repeatDelayId = null; }
+      if(repeatIntervalId){ clearInterval(repeatIntervalId); repeatIntervalId = null; }
+      heldDir = null;
+    }
+
+    function startRepeat(dir){
+      if(heldDir === dir) return;
+      stopRepeat();
+      heldDir = dir;
+      movePosition(dir, true);
+      repeatDelayId = setTimeout(()=>{
+        repeatIntervalId = setInterval(()=>{ movePosition(dir, false); }, KEY_REPEAT_INTERVAL);
+      }, KEY_REPEAT_DELAY);
+    }
+
+    window.addEventListener('keydown', (e)=>{
+      if(currentView !== 'view-game10') return;
+      if(waitingForSpace && (e.code==='Space' || e.key===' ')){
+        e.preventDefault(); startCountdownThenBegin(); return;
+      }
+      if(waitingForRestart && (e.code==='Space' || e.key===' ')){
+        e.preventDefault(); goToStartScreen(); return;
+      }
+      if(!roundRunning) return;
+      if(e.code === 'ArrowLeft'){ e.preventDefault(); startRepeat(-1); return; }
+      if(e.code === 'ArrowRight'){ e.preventDefault(); startRepeat(1); return; }
+      if(e.code === 'Space'){ e.preventDefault(); tryPressSpace(); return; }
+    });
+
+    window.addEventListener('keyup', (e)=>{
+      if(e.code === 'ArrowLeft' && heldDir === -1) stopRepeat();
+      if(e.code === 'ArrowRight' && heldDir === 1) stopRepeat();
+    });
+
+    return { goToStartScreen, stop };
+  })();
+</script>
+
+</body>
+</html>
