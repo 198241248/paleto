@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Sejf mazebank</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<script>
+  if (sessionStorage.getItem('paleto_auth') !== 'true') {
+    alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
+    window.location.href = 'index.html';
+  }
+
+  // 1. Dynamiczne wstrzykiwanie stylów CSS
+  const style = document.createElement('style');
+  style.innerHTML = `
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #0b0f14; color: #e6edf3; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+
+    @keyframes fadeScaleIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .btn-back { position: absolute; top: 20px; left: 20px; background: #131822; border: 1px solid #1f2937; color: #4dd8ff; padding: 8px 16px; border-radius: 6px; font-family: 'Teko', sans-serif; font-size: 20px; text-decoration: none; transition: 0.2s; }
+    .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
+
+    .bomb-frame { width: 680px; background: #131822; border: 2px solid #1f2937; border-radius: 10px; padding: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); position: relative; animation: fadeScaleIn 0.3s ease-out; }
+    .header-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding: 0 5px; }
+    .sys-title { font-size: 11px; font-weight: bold; color: #7d8590; letter-spacing: 1px; }
+    .mod-title { font-family: 'Teko', sans-serif; font-size: 34px; color: #4dd8ff; letter-spacing: 1px; line-height: 30px; text-transform: uppercase; }
+
+    .inner-screen { width: 100%; height: 320px; background: #0d1117; border: 1px solid #1f2937; border-radius: 6px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: radial-gradient(#1f2937 1.5px, transparent 1.5px); background-size: 18px 18px; padding: 20px; overflow: hidden; }
+
+    #g6-wrap { display: flex; flex-direction: column; align-items: stretch; gap: 14px; width: 100%; max-width: 560px; }
+    #g6-stats { display: flex; align-items: center; justify-content: space-between; font-size: 14px; letter-spacing: 0.5px; color: #fff; opacity: 0.85; }
+    #g6-stats b { font-weight: 800; opacity: 1; color: #4dd8ff; }
+    #g6-errors.g6-warn b { color: #ff4d4d; }
+
+    #g6-bar-wrap { width: 100%; height: 80px; border: 1px solid #1f2937; border-radius: 10px; background: rgba(0,0,0,0.4); padding: 8px; box-sizing: border-box; }
+    #g6-bar { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 6px; background: #131822; }
+    
+    #g6-zone { position: absolute; top: 0; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2ea043, #238636 18%, #238636 82%, #2ea043); border: 1px solid #3fb950; box-shadow: 0 0 10px rgba(46,160,67,0.4); }
+    #g6-marker { position: absolute; top: 0; height: 100%; width: 4px; border-radius: 2px; background: #f0b429; box-shadow: 0 0 10px rgba(240,180,41,0.8); }
+    #g6-space-label { text-align: center; box-sizing: border-box; width: 100%; background: rgba(240,180,41,0.1); border: 1px solid rgba(240,180,41,0.3); color: #f0b429; border-radius: 6px; padding: 10px 20px; font-family: 'Teko', sans-serif; font-size: 20px; letter-spacing: 2px; }
+
+    /* Ekran powiadomień w stylu Digital Den / Success-Fail */
+    #statusOverlay { position: absolute; inset: 0; background: rgba(13, 17, 23, 0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; z-index: 10; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+    #statusOverlay.show { opacity: 1; pointer-events: auto; }
+    #statusTitle { font-family: 'Teko', sans-serif; font-size: 48px; letter-spacing: 2px; text-transform: uppercase; }
+    #statusTitle.success { color: #2ea043; text-shadow: 0 0 20px rgba(46,160,67,0.6); }
+    #statusTitle.fail { color: #ff4d4d; text-shadow: 0 0 20px rgba(255,77,77,0.6); }
+    #statusSub { font-size: 14px; color: #8b949e; letter-spacing: 0.5px; }
+  `;
+  document.head.appendChild(style);
+
+  // 2. Dynamiczna struktura HTML
+  document.body.innerHTML = `
+    <a href="index.html" class="btn-back">◄ POWRÓT DO MENU</a>
+
+    <div class="bomb-frame">
+      <div class="header-bar">
+        <div>
+          <div class="sys-title">PALETO SYSTEM BEZPIECZEŃSTWA</div>
+          <div class="mod-title">MAZEBANK SEJFIK</div>
+        </div>
+      </div>
+      <div class="inner-screen" id="innerScreen">
+        
+        <div id="statusOverlay">
+          <div id="statusTitle">HACK UDANY</div>
+          <div id="statusSub">Sejf został otwarty pomyślnie.</div>
+        </div>
+
+        <div id="g6-wrap">
+          <div id="g6-stats">
+            <div id="g6-round">Runda: <b id="g6-round-val">1/4</b></div>
+            <div id="g6-errors">Błędy: <b id="g6-errors-val">0/3</b></div>
+          </div>
+          <div id="g6-bar-wrap">
+            <div id="g6-bar">
+              <div id="g6-zone"></div>
+              <div id="g6-marker"></div>
+            </div>
+          </div>
+          <div id="g6-space-label">ZATRZYMAJ WSKAZÓWKĘ [ SPACJA ]</div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  // 3. Moduł dźwiękowy (AudioContext)
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playTone(freq, duration, type = 'sine') {
+    try {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  // 4. Logika gry
+  const CONFIG = {
+    REQUIRED_HITS: 4,
+    MAX_ERRORS: 3,
+    BASE_SPEED: 340,
+    SPEED_GROWTH: 0.08,
+    ZONE_MIN_WIDTH: 40,
+    ZONE_MAX_WIDTH: 110
+  };
+
+  const MARKER_W = 4;
+  let barW = 0;
+  let markerPos = 0;
+  let direction = 1;
+  let speed = CONFIG.BASE_SPEED;
+  let hits = 0;
+  let errors = 0;
+  let zoneLeft = 0, zoneW = 0;
+  let rafId = null;
+  let lastTs = null;
+  let gameActive = true;
+
+  const barEl = document.getElementById('g6-bar');
+  const zoneEl = document.getElementById('g6-zone');
+  const markerEl = document.getElementById('g6-marker');
+  const roundValEl = document.getElementById('g6-round-val');
+  const errorsValEl = document.getElementById('g6-errors-val');
+  const errorsRowEl = document.getElementById('g6-errors');
+  const statusOverlay = document.getElementById('statusOverlay');
+  const statusTitle = document.getElementById('statusTitle');
+  const statusSub = document.getElementById('statusSub');
+
+  function measure() {
+    barW = barEl.clientWidth;
+  }
+
+  function currentZoneWidth() {
+    const span = CONFIG.ZONE_MAX_WIDTH - CONFIG.ZONE_MIN_WIDTH;
+    const totalSteps = Math.max(1, CONFIG.REQUIRED_HITS - 1);
+    const progress = Math.min(hits, totalSteps) / totalSteps;
+    return CONFIG.ZONE_MAX_WIDTH - span * progress;
+  }
+
+  function rollZone() {
+    zoneW = currentZoneWidth();
+    zoneW = Math.min(zoneW, barW - 4);
+    const maxLeft = Math.max(0, barW - zoneW);
+    zoneLeft = Math.random() * maxLeft;
+    zoneEl.style.width = zoneW + 'px';
+    zoneEl.style.left = zoneLeft + 'px';
+  }
+
+  function drawMarker() {
+    markerEl.style.left = markerPos + 'px';
+  }
+
+  function updateProgress() {
+    roundValEl.textContent = (hits + 1) + '/' + CONFIG.REQUIRED_HITS;
+    errorsValEl.textContent = errors + '/' + CONFIG.MAX_ERRORS;
+    errorsRowEl.classList.toggle('g6-warn', errors > 0);
+  }
+
+  function isMarkerInZone() {
+    const center = markerPos + MARKER_W / 2;
+    return center >= zoneLeft && center <= zoneLeft + zoneW;
+  }
+
+  function loop(ts) {
+    if (!gameActive) return;
+    if (lastTs === null) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+
+    const maxPos = barW - MARKER_W;
+    markerPos += direction * speed * dt;
+
+    if (markerPos <= 0) {
+      markerPos = 0;
+      direction = 1;
+    } else if (markerPos >= maxPos) {
+      markerPos = maxPos;
+      direction = -1;
+    }
+    drawMarker();
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function initGame() {
+    cancelAnimationFrame(rafId);
+    statusOverlay.classList.remove('show');
+    measure();
+    hits = 0;
+    errors = 0;
+    speed = CONFIG.BASE_SPEED;
+    direction = 1;
+    lastTs = null;
+    markerPos = 0;
+    gameActive = true;
+    updateProgress();
+    rollZone();
+    drawMarker();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function showStatusScreen(isSuccess, titleText, subText) {
+    gameActive = false;
+    cancelAnimationFrame(rafId);
+
+    statusTitle.textContent = titleText;
+    statusTitle.className = isSuccess ? 'success' : 'fail';
+    statusSub.textContent = subText;
+    statusOverlay.classList.add('show');
+
+    if (isSuccess) {
+      playTone(660, 0.15, 'sine');
+      setTimeout(() => playTone(990, 0.2, 'sine'), 150);
+    } else {
+      playTone(140, 0.35, 'sawtooth');
+    }
+
+    // Automatyczny restart po 2 sekundach pokazania ekranu wynikowego
+    setTimeout(() => {
+      initGame();
+    }, 2000);
+  }
+
+  function tryPressSpace() {
+    if (!gameActive || statusOverlay.classList.contains('show')) return;
+
+    if (isMarkerInZone()) {
+      hits++;
+      playTone(760, 0.12, 'square');
+      updateProgress();
+
+      if (hits >= CONFIG.REQUIRED_HITS) {
+        showStatusScreen(true, "HACK UDANY", "Sejf MazeBank został pomyślnie otwarty!");
+        return;
+      }
+      speed = speed * (1 + CONFIG.SPEED_GROWTH);
+      rollZone();
+    } else {
+      errors++;
+      playTone(220, 0.18, 'sawtooth');
+      updateProgress();
+
+      if (errors >= CONFIG.MAX_ERRORS) {
+        showStatusScreen(false, "BŁĄD SYSTEMU", "Zbyt wiele nieudanych prób. Zabezpieczenia zablokowane!");
+      }
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      tryPressSpace();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    measure();
+  });
+
+  // Start gry
+  window.onload = () => {
+    measure();
+    initGame();
+  };
+</script>
+
+</body>
+</html>
