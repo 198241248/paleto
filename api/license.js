@@ -17,9 +17,7 @@ export default async function handler(req, res) {
 
   const { action, key, adminPass } = req.body;
   
-  const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown_ip';
   const userAgent = req.headers['user-agent'] || 'unknown_agent';
-  const deviceId = `${clientIP}_${Buffer.from(userAgent).toString('base64').substring(0, 15)}`;
 
   const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534552834865889443/RShDnyLUsf4T9_34u8Zd6lryFuuAsd0PgDQbMKfqhwRRgowiHLp3R0_h2mzIm-XLKl-3";
   const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
@@ -68,7 +66,7 @@ export default async function handler(req, res) {
         await fetch(WEBHOOK_FAILED, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: `❌ **Błędna próba logowania o ${loginTime}**\n> IP: \`${clientIP}\`\n> Klucz: \`${key}\`` })
+          body: JSON.stringify({ content: `❌ **Błędna próba logowania o ${loginTime}**\`\n> Klucz: \`${key}\`` })
         });
       } catch(e) {}
 
@@ -89,7 +87,7 @@ export default async function handler(req, res) {
       await fetch(WEBHOOK_SUCCESS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `✅ **Udane logowanie o ${loginTime}**\n> IP: \`${clientIP}\`\n> Klucz: \`${key}\`` })
+        body: JSON.stringify({ content: `✅ **Udane logowanie o ${loginTime}**\`\n> Klucz: \`${key}\`` })
       });
     } catch(e) {}
 
