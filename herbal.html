@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Herbal Disctrict</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { 
+    background: #0b0f14; 
+    color: #e6edf3; 
+    font-family: 'Roboto', sans-serif; 
+    height: 100vh; 
+    width: 100vw;
+    position: relative; 
+    overflow: hidden; 
+    background-image: radial-gradient(#1f2937 2px, transparent 2px); 
+    background-size: 25px 25px; 
+  }
+
+  @keyframes scaleUpDot {
+    0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+  }
+
+  /* PRZYCISK POWROTU */
+  .btn-back { 
+    position: absolute; 
+    top: 20px; 
+    left: 20px; 
+    background: #131822; 
+    border: 1px solid #1f2937; 
+    color: #4dd8ff; 
+    padding: 8px 16px; 
+    border-radius: 6px; 
+    font-family: 'Teko', sans-serif; 
+    font-size: 20px; 
+    text-decoration: none; 
+    transition: 0.2s; 
+    z-index: 100; 
+  }
+  .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
+
+  /* KROPKI AIMLAB */
+  .aim-dot { 
+    position: absolute; 
+    width: 65px; 
+    height: 65px; 
+    border-radius: 50%; 
+    background: #4dd8ff; 
+    box-shadow: 0 0 25px #4dd8ff; 
+    cursor: pointer; 
+    transform: translate(-50%, -50%); 
+    animation: scaleUpDot 1.2s linear forwards; 
+    z-index: 50; 
+  }
+  
+  /* HUD / LICZNIK */
+  .aim-hud { 
+    position: absolute; 
+    top: 25px; 
+    right: 40px; 
+    font-family: 'Teko', sans-serif; 
+    font-size: 42px; 
+    color: #4dd8ff; 
+    text-shadow: 0 0 15px rgba(77,216,255,0.6); 
+    z-index: 100; 
+    pointer-events: none;
+  }
+
+  /* OVERLAY START / KONIEC */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 15, 20, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    text-align: center;
+    padding: 20px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h1 { font-family: 'Teko', sans-serif; font-size: 56px; letter-spacing: 2px; margin-bottom: 10px; color: #4dd8ff; text-shadow: 0 0 20px rgba(77,216,255,0.4); }
+  .overlay h1.win { color: #5cff8a; text-shadow: 0 0 20px rgba(92,255,138,0.4); }
+  .overlay h1.lose { color: #ff4d4d; text-shadow: 0 0 20px rgba(255,77,77,0.4); }
+  .overlay p { font-size: 18px; color: #8b949e; margin-bottom: 25px; }
+  .overlay .hint { font-size: 20px; color: #4dd8ff; animation: pulse 1.5s infinite; font-family: 'Teko', sans-serif; letter-spacing: 1px; }
+
+  @keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+  }
+</style>
+</head>
+<body>
+
+<a href="index.html" class="btn-back">◄ POWRÓT DO MENU</a>
+
+<div class="aim-hud" id="aimHud" style="display: none;">Pozostało: 10</div>
+
+<!-- OVERLAY -->
+<div id="overlay" class="overlay">
+  <div id="overlayHint" class="hint">Naciśnij SPACJĘ, aby rozpocząć.</div>
+</div>
+
+<script>
+if (sessionStorage.getItem('paleto_auth') !== 'true') {
+    alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
+    window.location.href = 'index.html';
+  }
+
+  let audioCtx = null;
+  function initAudio(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playTone(freq, duration, type='sine'){
+    try {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  let gameActive = false;
+  let waitingForSpace = true;
+  let waitingForRestart = false;
+  let aimPointsLeft = 10;
+  let aimTimer = null;
+
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlaySub = document.getElementById('overlaySub');
+  const overlayHint = document.getElementById('overlayHint');
+  const aimHud = document.getElementById('aimHud');
+
+  function startGame() {
+    overlay.classList.add('hidden');
+    aimHud.style.display = 'block';
+    waitingForSpace = false;
+    waitingForRestart = false;
+    gameActive = true;
+    aimPointsLeft = 10;
+    spawnAimDot();
+  }
+
+  function spawnAimDot() {
+    if(!gameActive) return;
+
+    if(aimPointsLeft <= 0) {
+      endGame(true);
+      return;
+    }
+
+    aimHud.innerText = `Pozostało: ${aimPointsLeft}`;
+
+    // Usuń poprzednią kropkę jeśli istnieje
+    const oldDot = document.querySelector('.aim-dot');
+    if(oldDot) oldDot.remove();
+
+    let margin = 100;
+    let x = Math.random() * (window.innerWidth - margin * 2) + margin;
+    let y = Math.random() * (window.innerHeight - margin * 2) + margin;
+
+    const dot = document.createElement('div');
+    dot.className = 'aim-dot';
+    dot.style.left = `${x}px`;
+    dot.style.top = `${y}px`;
+
+    dot.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      clearTimeout(aimTimer);
+      playTone(760, 0.08, 'square');
+      aimPointsLeft--;
+      spawnAimDot();
+    });
+
+    document.body.appendChild(dot);
+
+    // Czas na kliknięcie kropki (1.3 sekundy)
+    aimTimer = setTimeout(() => {
+      endGame(false);
+    }, 1300);
+  }
+
+  function endGame(success) {
+    clearTimeout(aimTimer);
+    gameActive = false;
+    aimHud.style.display = 'none';
+    
+    const oldDot = document.querySelector('.aim-dot');
+    if(oldDot) oldDot.remove();
+
+    overlay.classList.remove('hidden');
+    waitingForRestart = true;
+
+    if(success) {
+      playTone(880, 0.3, 'sine');
+      overlayTitle.className = 'win';
+      overlayTitle.textContent = 'HACK ZALICZONY';
+      overlayHint.textContent = 'Naciśnij SPACJĘ, aby zagrać ponownie.';
+    } else {
+      playTone(140, 0.35, 'sawtooth');
+      overlayTitle.className = 'lose';
+      overlayTitle.textContent = 'CZAS MINĄŁ';
+      overlaySub.textContent = 'Nie zdążyłeś kliknąć w cel na czas.';
+      overlayHint.textContent = 'Naciśnij SPACJĘ, aby spróbować ponownie.';
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if(e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      if(waitingForSpace) {
+        startGame();
+      } else if(waitingForRestart) {
+        waitingForRestart = false;
+        waitingForSpace = true;
+        overlayTitle.className = '';
+        overlayTitle.textContent = 'HACK ZALICZONY';
+        overlayHint.textContent = 'Naciśnij SPACJĘ, aby rozpocząć.';
+        overlay.classList.remove('hidden');
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
