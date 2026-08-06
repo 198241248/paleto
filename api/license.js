@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
   const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
-  // 1. GENEROWANIE KLUCZA (Wysyła tylko na Discord, nie oddaje klucza do przeglądarki)
+  // 1. GENEROWANIE KLUCZA
   if (action === 'generate') {
     if (adminPass !== "lxowqxeqxwekopxqwkoq") { 
       return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
     const randomPart1 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const newKey = `KEY-${randomPart1}-${randomPart2}`; // Zmienione na KEY- lub możesz dać co chcesz
+    const newKey = `KEY-${randomPart1}-${randomPart2}`;
     
     global.activeKeys.push(newKey);
 
@@ -46,8 +46,7 @@ export default async function handler(req, res) {
       });
     } catch(e) {}
 
-    // Zwracamy czysty sukces bez podawania klucza w odpowiedzi
-    return res.status(200).json({ success: true, message: "Klucz został wygenerowany i wysłany na Discord!" });
+    return res.status(200).json({ success: true, key: newKey, message: "Klucz został wygenerowany pomyślnie!" });
   }
 
   // 2. WERYFIKACJA I PRZYPISANIE DO URZĄDZENIA

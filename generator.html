@@ -17,11 +17,10 @@
     .gen-title { font-family: 'Teko', sans-serif; font-size: 36px; color: #4dd8ff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
     .gen-subtitle { font-size: 12px; color: #7d8590; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px; }
     
-    .gen-btn { width: 100%; padding: 12px; background: #4dd8ff; border: none; color: #0b0f14; font-family: 'Teko', sans-serif; font-size: 22px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; margin-bottom: 15px; }
+    .gen-btn { width: 100%; padding: 14px; background: #4dd8ff; border: none; color: #0b0f14; font-family: 'Teko', sans-serif; font-size: 24px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
     .gen-btn:hover { background: #3ab1cc; }
     
-    .key-output { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #1f2937; color: #4dd8ff; border-radius: 6px; font-family: monospace; font-size: 18px; text-align: center; margin-top: 10px; word-break: break-all; cursor: pointer; }
-    .btn-back { display: inline-block; margin-top: 20px; color: #7d8590; font-size: 14px; text-decoration: none; }
+    .btn-back { display: inline-block; margin-top: 25px; color: #7d8590; font-size: 14px; text-decoration: none; }
     .btn-back:hover { color: #4dd8ff; }
   </style>
 </head>
@@ -32,16 +31,13 @@
     <div class="gen-subtitle">Panel Administratora</div>
     
     <button class="gen-btn" onclick="generateKey()">WYGENERUJ KLUCZ</button>
-    
-    <div style="font-size: 12px; color: #7d8590; text-align: left; margin-top: 10px;">Wygenerowany klucz:</div>
-    <div class="key-output" id="keyOutput" onclick="copyKey()">Brak klucza</div>
 
     <a href="index.html" class="btn-back">◄ Powrót do menu głównego</a>
   </div>
 
 <script>
   async function generateKey() {
-    let adminPassInput = prompt("");
+    let adminPassInput = prompt("Podaj hasło administratora:");
     if (!adminPassInput) return;
 
     try {
@@ -53,22 +49,12 @@
       const data = await response.json();
 
       if (data.success) {
-        document.getElementById('keyOutput').innerText = data.key;
-        navigator.clipboard.writeText(data.key);
-        alert("Klucz wygenerowany i skopiowany do schowka!");
+        alert("Klucz został pomyślnie wygenerowany i wysłany na Discorda!");
       } else {
         alert(data.message || "Błędne hasło!");
       }
     } catch (e) {
       alert("Błąd połączenia z serwerem.");
-    }
-  }
-
-  function copyKey() {
-    const keyText = document.getElementById('keyOutput').innerText;
-    if (keyText !== "Brak klucza") {
-      navigator.clipboard.writeText(keyText);
-      alert("Skopiowano klucz do schowka: " + keyText);
     }
   }
 </script>
