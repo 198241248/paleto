@@ -18,14 +18,13 @@ export default async function handler(req, res) {
   const { action, key, adminPass, duration, nick } = req.body;
   const loginTime = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
 
-  // Generowanie stabilnego identyfikatora urządzenia na podstawie nagłówków żądania
+  // Zabezpieczenie po IP działa w tle (nic nie zmienia w bazie)
   const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown_ip';
   const userAgent = req.headers['user-agent'] || 'unknown_agent';
   const deviceId = `${clientIP}_${Buffer.from(userAgent).toString('base64').substring(0, 15)}`;
 
   const WEBHOOK_LOGS = "https://discord.com/api/webhooks/1534882494602678464/Ku1s9nyNtcpxsnYi38fHCC_-Rx6m-B4N4apHUveS-_aLPleZbm54yt-7dRA86vBZn52-";
 
-  // Sprawdzanie hasła administratora dla akcji zarządzanych przez bota/panel
   const adminActions = ['generate', 'delete', 'extend', 'reset', 'info'];
   if (adminActions.includes(action) && adminPass !== "lxowqxeqxwekopxqwkoq") {
     return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
@@ -37,17 +36,16 @@ export default async function handler(req, res) {
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const newKey = `KEY-${randomPart1}-${randomPart2}`;
     
-    // Obliczanie daty wygaśnięcia
     let expiresAt = null;
     const now = Date.now();
     if (duration === '1h') expiresAt = now + 60 * 60 * 1000;
     else if (duration === '24h') expiresAt = now + 24 * 60 * 60 * 1000;
     else if (duration === '7d') expiresAt = now + 7 * 24 * 60 * 60 * 1000;
     else if (duration === '30d') expiresAt = now + 30 * 24 * 60 * 60 * 1000;
-    else expiresAt = 'lifetime'; // Dożywotnio
+    else expiresAt = 'lifetime';
 
     await kv.hset(`key:${newKey}`, { 
-      boundDevice: null, 
+      boundDevice: null,
       nick: null, 
       expiresAt: expiresAt,
       durationLabel: duration || 'lifetime'
@@ -78,36 +76,31 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
     }
 
-    // Sprawdzenie wygaśnięcia licencji
     if (keyData.expiresAt !== 'lifetime' && Date.now() > Number(keyData.expiresAt)) {
       return res.status(400).json({ success: false, message: "Ten klucz wygasł!" });
     }
 
-    // Sprawdzamy czy urządzenie się zgadza
     if (keyData.boundDevice) {
       if (keyData.boundDevice !== deviceId) {
         return res.status(400).json({ success: false, message: "Ten klucz jest przypisany do innego urządzenia!" });
       }
       
-      // Jeśli urządzenie się zgadza, ale nie ma jeszcze zarejestrowanego nicku
       if (!keyData.nick) {
         return res.status(200).json({ success: false, needsRegistration: true });
       }
 
-      // Log udanego logowania na Discorda
       try {
         await fetch(WEBHOOK_LOGS, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            content: `✅ **Logowanie użytkownika o ${loginTime}**\n> Nick: \`${keyData.nick}\`\n> Klucz: \`${key}\`\n> Ważność: \`${keyData.durationLabel}\`` 
+            content: `✅ **Logowanie użytkownika o ${loginTime}**\n> Nick: \`${keyData.nick}\`\n> Klucz: \`${key}\`` 
           })
         });
       } catch(e) {}
 
       return res.status(200).json({ success: true, message: "Zalogowano pomyślnie!" });
     } else {
-      // Klucz nie ma jeszcze przypisanego urządzenia -> Wymagaj rejestracji nicku
       return res.status(200).json({ success: false, needsRegistration: true });
     }
   }
@@ -127,9 +120,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "Klucz jest już zajęty przez inne urządzenie!" });
     }
 
-    // Przypisujemy urządzenie i nick na stałe, zachowując parametry wygaśnięcia
     await kv.hset(`key:${key}`, { 
-      boundDevice: deviceId, 
+      boundDevice: deviceId,
       nick: nick,
       expiresAt: keyData.expiresAt,
       durationLabel: keyData.durationLabel
@@ -140,7 +132,7 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          content: `📝 **Nowa rejestracja / Pierwsze logowanie o ${loginTime}**\n> Nick: \`${nick}\`\n> Klucz: \`${key}\`\n> Ważność: \`${keyData.durationLabel}\`` 
+          content: `📝 **Nowa rejestracja o ${loginTime}**\n> Nick: \`${nick}\`\n> Klucz: \`${key}\`` 
         })
       });
     } catch(e) {}
@@ -148,7 +140,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, message: "Zarejestrowano pomyślnie!" });
   }
 
-  // 4. INFORMACJE O KLUCZU (Dla bota)
+  // 4. INFORMACJE O KLUCZU (BEZ ŻADNYCH WZMINEK O IP / URZĄDZENIU)
   if (action === 'info') {
     if (!key) {
       return res.status(400).json({ success: false, message: "Podaj klucz!" });
@@ -171,17 +163,17 @@ export default async function handler(req, res) {
       }
     }
 
+    // Czyste informacje bez IP
     const infoText = `📋 **Informacje o kluczu:**\n` +
                      `> Klucz: \`${key}\`\n` +
                      `> Nick: \`${keyData.nick || 'Brak (nieprzypisany)'}\`\n` +
-                     `> Urządzenie ID: \`${keyData.boundDevice ? keyData.boundDevice : 'Brak'}\`\n` +
-                     `> Typ ważności: \`${keyData.durationLabel || 'lifetime'}\`\n` +
+                     `> Ważność: \`${keyData.durationLabel || 'lifetime'}\`\n` +
                      `> Pozostało czasu: \`${timeLeft}\``;
 
     return res.status(200).json({ success: true, message: infoText });
   }
 
-  // 5. ZWOLNIENIE LICENCJI / RESET URZĄDZENIA I NICKU (Dla bota)
+  // 5. ZWOLNIENIE LICENCJI / RESET URZĄDZENIA I NICKU
   if (action === 'reset') {
     if (!key) {
       return res.status(400).json({ success: false, message: "Podaj klucz do zresetowania!" });
@@ -199,10 +191,10 @@ export default async function handler(req, res) {
       durationLabel: keyData.durationLabel
     });
 
-    return res.status(200).json({ success: true, message: `Zresetowano przypisanie urządzenia i nicku dla klucza: ${key}` });
+    return res.status(200).json({ success: true, message: `Zresetowano przypisanie dla klucza: ${key}` });
   }
 
-  // 6. ZMIANA / PRZEDŁUŻENIE DATY WAŻNOŚCI (Dla bota)
+  // 6. ZMIANA / PRZEDŁUŻENIE DATY WAŻNOŚCI
   if (action === 'extend') {
     if (!key || !duration) {
       return res.status(400).json({ success: false, message: "Podaj klucz oraz nowy czas ważności!" });
@@ -231,7 +223,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, message: `Zaktualizowano ważność klucza ${key} na: ${duration}` });
   }
 
-  // 7. USUNIĘCIE KLUCZA (Dla bota)
+  // 7. USUNIĘCIE KLUCZA
   if (action === 'delete') {
     if (!key) {
       return res.status(400).json({ success: false, message: "Podaj klucz do usunięcia!" });
