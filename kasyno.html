@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Digital Den - WaveMatch & Untangle</title>
+  <title>Kasyno</title>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -45,6 +45,7 @@
       text-decoration: none; 
       transition: 0.2s; 
       z-index: 200; 
+      letter-spacing: 1px;
     }
     .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
 
@@ -64,346 +65,79 @@
       justify-content: center;
     }
 
-    /* ---------- MENU WYBORU ETAPÓW ---------- */
+    /* ---------- NOWY STYL MENU WYBORU ETAPÓW ---------- */
     #view-menu {
       z-index: 150;
       background: #0a0c10;
     }
 
-    .menu-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: min(500px, 90vw);
-      background: #111318;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 30px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    .menu-main-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 52px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-align: center;
+      line-height: 1;
+      margin-bottom: 5px;
+      text-shadow: 0 0 20px rgba(77,216,255,0.3);
+    }
+
+    .menu-main-sub {
+      font-size: 13px;
+      color: #8b949e;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 40px;
       text-align: center;
     }
 
-    .menu-title {
-      font-family: 'Teko', sans-serif;
-      font-size: 48px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      color: #fff;
-      margin-bottom: 8px;
-    }
-
-    .menu-title span { color: var(--accent); }
-
-    .menu-sub {
-      font-size: 14px;
-      color: #8b949e;
-      margin-bottom: 30px;
-      letter-spacing: 0.3px;
-    }
-
-    .menu-buttons {
+    .menu-list {
       display: flex;
       flex-direction: column;
-      gap: 15px;
-      width: 100%;
+      gap: 16px;
+      width: min(650px, 90vw);
     }
 
-    .menu-btn {
-      background: #131822;
-      border: 1px solid var(--accent);
-      color: var(--accent);
-      padding: 14px 20px;
-      font-size: 26px;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-      font-family: 'Teko', sans-serif;
-      letter-spacing: 1.5px;
-      box-shadow: 0 0 15px rgba(77,216,255,0.15);
+    .menu-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #111318;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 20px 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
       transition: 0.2s;
     }
 
-    .menu-btn:hover {
-      background: #1a2332;
-      box-shadow: 0 0 25px rgba(77,216,255,0.4);
-      transform: translateY(-2px);
+    .menu-card:hover {
+      border-color: rgba(77,216,255,0.3);
+      background: #141820;
     }
 
-    .menu-btn.stage2 {
-      border-color: var(--untangle-node);
-      color: var(--untangle-node);
-      box-shadow: 0 0 15px rgba(0,191,255,0.15);
-    }
-
-    .menu-btn.stage2:hover {
-      box-shadow: 0 0 25px rgba(0,191,255,0.4);
-    }
-
-    /* ---------- GRA 3: WaveMatch ---------- */
-    #view-game3 {
-      background: #0a0c10;
-    }
-
-    #app3 {
-      height: 100%;
-      width: 100%;
+    .menu-card-info {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 8vh 0 3vh;
+      gap: 4px;
     }
 
-    #wm-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: min(860px, 90vw);
-      gap: 1.6vh;
-      background: #111318;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 18px 22px 22px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
-    }
-
-    #wm-header {
-      width: 100%;
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      font-size: 11px;
-      letter-spacing: 1.5px;
-    }
-
-    #wm-title {
+    .menu-card-title {
       font-family: 'Teko', sans-serif;
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      color: #fff;
-      display: flex;
-      align-items: baseline;
-      line-height: 1;
-    }
-
-    #wm-title span { color: var(--wm-purple); }
-    #wm-sub { opacity: 0.55; font-size: 12px; letter-spacing: 0.2px; font-weight: 400; }
-    #wm-iter { opacity: 0.55; margin-left: auto; font-family: 'Teko', sans-serif; font-size: 18px; }
-    #wm-match-pct { opacity: 0.85; font-size: 12px; }
-
-    .wm-sl-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent);
       letter-spacing: 1px;
-      opacity: 0.6;
-      margin-bottom: 3px;
-    }
-
-    #wm-canvas-wrap {
-      width: 100%;
-      height: 28vh;
-      position: relative;
-      overflow: hidden;
-      background: rgba(255,255,255,0.035);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px;
-    }
-
-    #wm-canvas-target, #wm-canvas-user {
-      position: absolute;
-      top: 0;
-      left: 0;
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-
-    #wm-match-wrap {
-      width: 100%;
-      height: 11px;
-      position: relative;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    #wm-match-bar {
-      height: 100%;
-      width: 0%;
-      border-radius: 6px;
-      background: linear-gradient(90deg, #514cd8, var(--wm-purple));
-      transition: width 0.12s linear, background 0.25s;
-      box-shadow: 0 0 12px var(--wm-purple-glow);
-    }
-
-    #wm-match-bar.wm-win { background: var(--green); box-shadow: 0 0 12px rgba(92,255,138,0.55); }
-    #wm-match-bar.wm-fail { background: var(--accent2); box-shadow: 0 0 12px rgba(255,77,77,0.55); }
-
-    #wm-timer-wrap {
-      width: 100%;
-      height: 9px;
-      border-radius: 6px;
-      overflow: hidden;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    #wm-timer-bar {
-      height: 100%;
-      width: 100%;
-      border-radius: 6px;
-      background: linear-gradient(90deg, #514cd8, var(--wm-purple));
-      box-shadow: 0 0 12px var(--wm-purple-glow);
-    }
-
-    #wm-sliders {
-      width: 100%;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1vh 1.6vh;
-      margin-top: 0.3vh;
-    }
-
-    .wm-sg { display: flex; flex-direction: column; }
-
-    .wm-range {
-      width: 100%;
-      -webkit-appearance: none;
-      appearance: none;
-      height: 8px;
-      border-radius: 6px;
-      outline: none;
-      cursor: pointer;
-      background: linear-gradient(to right, var(--wm-purple) var(--sl-fill, 50%), rgba(255,255,255,0.08) var(--sl-fill, 50%));
-      transition: background 0.05s linear;
-    }
-
-    .wm-range::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 20px;
-      background: #f1f1f8;
-      border-radius: 3px;
-      cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    }
-
-    .wm-range:disabled { opacity: 0.28; cursor: default; }
-
-    /* ---------- GRA 9: Untangle ---------- */
-    #view-game9 {
-      background: #0a0c10;
-    }
-
-    #app9 {
-      height: 100%; width: 100%;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 6vh 0 2vh;
-    }
-    #g9-wrap {
-      display: flex; flex-direction: column; align-items: center;
-      width: min(600px, 65vh, 85vw); gap: 1.6vh;
-      z-index: 10;
-      background: #111318;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 18px 22px 22px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
-    }
-    #g9-header { width: 100%; }
-    #g9-title {
-      font-family: 'Teko', sans-serif;
-      font-size: 38px; font-weight: 700; letter-spacing: 1px; color: #fff;
       line-height: 1;
     }
-    #g9-title span { color: var(--untangle-node); text-shadow: 0 0 15px rgba(0,191,255,0.7); }
-    #g9-sub { font-size: 13px; opacity: 0.7; letter-spacing: 0.3px; margin-top: 2px; color: #8b949e; }
-    
-    #g9-canvas-wrap {
-      position: relative; width: 100%; aspect-ratio: 1/1;
-      background: rgba(13, 20, 30, 0.85);
-      border: 1px solid #1f3a5f;
-      box-shadow: inset 0 0 30px rgba(0, 191, 255, 0.05);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    #g9-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-    
-    .g9-node {
-      position: absolute; width: 28px; height: 28px; border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #85e3ff, var(--untangle-node));
-      box-shadow: 0 0 16px 5px var(--untangle-node-glow);
-      transform: translate(-50%,-50%);
-      cursor: grab;
-      z-index: 2;
-      border: 2px solid #ffffff;
-    }
-    .g9-node:active { cursor: grabbing; transform: translate(-50%,-50%) scale(1.15); }
-    
-    .g9-stage-notice {
-      position: absolute; top: 50%; left: 50%; z-index: 5;
-      transform: translate(-50%,-50%) scale(0.92);
-      padding: 14px 26px; border-radius: 10px;
-      background: rgba(11, 15, 20, 0.95);
-      border: 1px solid var(--untangle-node);
-      box-shadow: 0 0 26px var(--untangle-node-glow);
-      color: #fff; font-weight: 700; letter-spacing: 1.5px; font-size: 14px; text-transform: uppercase;
-      font-family: 'Teko', sans-serif;
-      text-align: center; white-space: nowrap;
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.18s ease, transform 0.18s ease;
-    }
-    .g9-stage-notice.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-    
-    #g9-timer-wrap {
-      width: 100%; height: 9px; border-radius: 6px; overflow: hidden;
-      background: rgba(31, 41, 55, 0.6);
-      border: 1px solid #1f2937;
-    }
-    #g9-timer-bar {
-      height: 100%; width: 100%; border-radius: 6px;
-      background: linear-gradient(90deg, #0055ff, var(--untangle-node));
-      box-shadow: 0 0 12px var(--untangle-node-glow);
-      transition: width 0.1s linear;
-    }
-    #g9-progress { 
-      font-family: 'Teko', sans-serif;
-      font-size: 20px; letter-spacing: 2px; opacity: 0.8; align-self: flex-start; color: #8b949e; 
-    }
-    #g9-progress b { color: var(--untangle-node); }
 
-    /* Overlay wspólny */
-    .overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(10, 12, 16, 0.88);
-      backdrop-filter: blur(8px);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
+    .menu-card-desc {
+      font-size: 13px;
+      color: #8b949e;
+      letter-spacing: 0.2px;
     }
 
-    .overlay.show {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .overlay h1 { font-family: 'Teko', sans-serif; font-size: 52px; margin: 0 0 10px; letter-spacing: 2px; }
-    .overlay h1.win { color: var(--green); text-shadow: 0 0 20px rgba(92,255,138,0.4); }
-    .overlay h1.lose { color: var(--accent2); text-shadow: 0 0 20px rgba(255,77,77,0.4); }
-    .overlay p { font-size: 16px; opacity: 0.7; margin: 0 0 20px; color: #8b949e; }
-    .overlay .hint { font-size: 22px; color: var(--accent); margin-bottom: 15px; font-family: 'Teko', sans-serif; letter-spacing: 1px; animation: pulse 1.5s infinite; }
-    .overlay .countdown { font-family: 'Teko', sans-serif; font-size: 64px; font-weight: bold; color: var(--wm-purple); text-shadow: 0 0 20px rgba(107,103,239,0.6); }
-
-    .overlay button {
+    .menu-start-btn {
       background: #131822;
       border: 1px solid var(--accent);
       color: var(--accent);
@@ -413,31 +147,197 @@
       border-radius: 6px;
       cursor: pointer;
       font-family: 'Teko', sans-serif;
-      letter-spacing: 1px;
-      box-shadow: 0 0 15px rgba(77,216,255,0.25);
+      letter-spacing: 1.5px;
+      box-shadow: 0 0 15px rgba(77,216,255,0.15);
       transition: 0.2s;
+      white-space: nowrap;
     }
 
+    .menu-start-btn:hover {
+      background: var(--accent);
+      color: #0a0c10;
+      box-shadow: 0 0 25px rgba(77,216,255,0.5);
+    }
+
+    /* ---------- GRA 3: WaveMatch ---------- */
+    #view-game3 { background: #0a0c10; }
+
+    #app3 {
+      height: 100%; width: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 8vh 0 3vh;
+    }
+
+    #wm-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      width: min(860px, 90vw); gap: 1.6vh;
+      background: #111318; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 18px 22px 22px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    }
+
+    #wm-header {
+      width: 100%; display: flex; align-items: baseline; gap: 12px; font-size: 11px; letter-spacing: 1.5px;
+    }
+
+    #wm-title {
+      font-family: 'Teko', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: 0.5px; color: #fff;
+      display: flex; align-items: baseline; line-height: 1;
+    }
+    #wm-title span { color: var(--wm-purple); }
+    #wm-sub { opacity: 0.55; font-size: 12px; letter-spacing: 0.2px; font-weight: 400; }
+    #wm-iter { opacity: 0.55; margin-left: auto; font-family: 'Teko', sans-serif; font-size: 18px; }
+    #wm-match-pct { opacity: 0.85; font-size: 12px; }
+
+    .wm-sl-label {
+      display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1px; opacity: 0.6; margin-bottom: 3px;
+    }
+
+    #wm-canvas-wrap {
+      width: 100%; height: 28vh; position: relative; overflow: hidden;
+      background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+    }
+    #wm-canvas-target, #wm-canvas-user { position: absolute; top: 0; left: 0; display: block; width: 100%; height: 100%; }
+
+    #wm-match-wrap {
+      width: 100%; height: 11px; position: relative;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden;
+    }
+    #wm-match-bar {
+      height: 100%; width: 0%; border-radius: 6px;
+      background: linear-gradient(90deg, #514cd8, var(--wm-purple));
+      transition: width 0.12s linear, background 0.25s;
+      box-shadow: 0 0 12px var(--wm-purple-glow);
+    }
+    #wm-match-bar.wm-win { background: var(--green); box-shadow: 0 0 12px rgba(92,255,138,0.55); }
+    #wm-match-bar.wm-fail { background: var(--accent2); box-shadow: 0 0 12px rgba(255,77,77,0.55); }
+
+    #wm-timer-wrap {
+      width: 100%; height: 9px; border-radius: 6px; overflow: hidden;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    }
+    #wm-timer-bar {
+      height: 100%; width: 100%; border-radius: 6px;
+      background: linear-gradient(90deg, #514cd8, var(--wm-purple));
+      box-shadow: 0 0 12px var(--wm-purple-glow);
+    }
+
+    #wm-sliders {
+      width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1vh 1.6vh; margin-top: 0.3vh;
+    }
+    .wm-sg { display: flex; flex-direction: column; }
+    .wm-range {
+      width: 100%; -webkit-appearance: none; appearance: none; height: 8px; border-radius: 6px; outline: none; cursor: pointer;
+      background: linear-gradient(to right, var(--wm-purple) var(--sl-fill, 50%), rgba(255,255,255,0.08) var(--sl-fill, 50%));
+    }
+    .wm-range::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 12px; height: 20px; background: #f1f1f8; border-radius: 3px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .wm-range:disabled { opacity: 0.28; cursor: default; }
+
+    /* ---------- GRA 9: Untangle ---------- */
+    #view-game9 { background: #0a0c10; }
+
+    #app9 {
+      height: 100%; width: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 6vh 0 2vh;
+    }
+    #g9-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      width: min(600px, 65vh, 85vw); gap: 1.6vh; z-index: 10;
+      background: #111318; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+      padding: 18px 22px 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    }
+    #g9-header { width: 100%; }
+    #g9-title {
+      font-family: 'Teko', sans-serif; font-size: 38px; font-weight: 700; letter-spacing: 1px; color: #fff; line-height: 1;
+    }
+    #g9-title span { color: var(--untangle-node); text-shadow: 0 0 15px rgba(0,191,255,0.7); }
+    #g9-sub { font-size: 13px; opacity: 0.7; letter-spacing: 0.3px; margin-top: 2px; color: #8b949e; }
+    
+    #g9-canvas-wrap {
+      position: relative; width: 100%; aspect-ratio: 1/1;
+      background: rgba(13, 20, 30, 0.85); border: 1px solid #1f3a5f;
+      box-shadow: inset 0 0 30px rgba(0, 191, 255, 0.05); border-radius: 8px; overflow: hidden;
+    }
+    #g9-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    
+    .g9-node {
+      position: absolute; width: 28px; height: 28px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #85e3ff, var(--untangle-node));
+      box-shadow: 0 0 16px 5px var(--untangle-node-glow);
+      transform: translate(-50%,-50%); cursor: grab; z-index: 2; border: 2px solid #ffffff;
+    }
+    .g9-node:active { cursor: grabbing; transform: translate(-50%,-50%) scale(1.15); }
+    
+    .g9-stage-notice {
+      position: absolute; top: 50%; left: 50%; z-index: 5;
+      transform: translate(-50%,-50%) scale(0.92); padding: 14px 26px; border-radius: 10px;
+      background: rgba(11, 15, 20, 0.95); border: 1px solid var(--untangle-node);
+      box-shadow: 0 0 26px var(--untangle-node-glow); color: #fff; font-weight: 700; letter-spacing: 1.5px;
+      font-size: 14px; text-transform: uppercase; font-family: 'Teko', sans-serif; text-align: center;
+      white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    .g9-stage-notice.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    
+    #g9-timer-wrap { width: 100%; height: 9px; border-radius: 6px; overflow: hidden; background: rgba(31, 41, 55, 0.6); border: 1px solid #1f2937; }
+    #g9-timer-bar {
+      height: 100%; width: 100%; border-radius: 6px;
+      background: linear-gradient(90deg, #0055ff, var(--untangle-node));
+      box-shadow: 0 0 12px var(--untangle-node-glow); transition: width 0.1s linear;
+    }
+    #g9-progress { font-family: 'Teko', sans-serif; font-size: 20px; letter-spacing: 2px; opacity: 0.8; align-self: flex-start; color: #8b949e; }
+    #g9-progress b { color: var(--untangle-node); }
+
+    /* Overlay wspólny */
+    .overlay {
+      position: absolute; inset: 0; background: rgba(10, 12, 16, 0.88); backdrop-filter: blur(8px);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+    .overlay.show { opacity: 1; pointer-events: auto; }
+    .overlay h1 { font-family: 'Teko', sans-serif; font-size: 52px; margin: 0 0 10px; letter-spacing: 2px; }
+    .overlay h1.win { color: var(--green); text-shadow: 0 0 20px rgba(92,255,138,0.4); }
+    .overlay h1.lose { color: var(--accent2); text-shadow: 0 0 20px rgba(255,77,77,0.4); }
+    .overlay p { font-size: 16px; opacity: 0.7; margin: 0 0 20px; color: #8b949e; }
+    .overlay .hint { font-size: 22px; color: var(--accent); margin-bottom: 15px; font-family: 'Teko', sans-serif; letter-spacing: 1px; animation: pulse 1.5s infinite; }
+    .overlay .countdown { font-family: 'Teko', sans-serif; font-size: 64px; font-weight: bold; color: var(--wm-purple); text-shadow: 0 0 20px rgba(107,103,239,0.6); }
+
+    .overlay button {
+      background: #131822; border: 1px solid var(--accent); color: var(--accent);
+      padding: 10px 24px; font-size: 22px; font-weight: bold; border-radius: 6px; cursor: pointer;
+      font-family: 'Teko', sans-serif; letter-spacing: 1px; box-shadow: 0 0 15px rgba(77,216,255,0.25); transition: 0.2s;
+    }
     .overlay button:hover { background: #1a2332; box-shadow: 0 0 25px rgba(77,216,255,0.5); }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   </style>
 </head>
 <body>
 
-<a href="index.html" id="btn-back-main" class="btn-back" style="display:none;">◄ POWRÓT DO MENU</a>
+<a href="index.html" id="btn-back-main" class="btn-back" style="display:none;">◄ POWRÓT</a>
 
-<!-- ============ MENU WYBORU ETAPÓW ============ -->
+<!-- ============ MENU WYBORU ETAPÓW (NOWY WYGLĄD) ============ -->
 <div id="view-menu" class="view active">
-  <div class="menu-container">
-    <div class="menu-title">WYBIERZ <span>ETAP</span></div>
-    <div class="menu-sub">Wybierz, od którego zabezpieczenia chcesz zacząć.</div>
-    <div class="menu-buttons">
-      <button class="menu-btn" id="btn-stage1">ETAP 1: WAVE MATCH</button>
-      <button class="menu-btn stage2" id="btn-stage2">ETAP 2: UNTANGLE</button>
+  <div class="menu-main-title">KASYNO</div>
+  <div class="menu-main-sub"></div>
+  
+  <div class="menu-list">
+    <div class="menu-card">
+      <div class="menu-card-info">
+        <div class="menu-card-title">ETAP 1: WAVE MATCH</div>
+        <div class="menu-card-desc">Dopasuj parametry i suwaki fali do wzorca.</div>
+      </div>
+      <button class="menu-start-btn" id="btn-stage1">START</button>
+    </div>
+
+    <div class="menu-card">
+      <div class="menu-card-info">
+        <div class="menu-card-title">ETAP 2: UNTANGLE</div>
+        <div class="menu-card-desc">Przeciągaj węzły, aby upewnić się, że żadne linie się nie przecinają.</div>
+      </div>
+      <button class="menu-start-btn" id="btn-stage2">START</button>
     </div>
   </div>
 </div>
@@ -522,7 +422,7 @@
 </div>
 
 <script>
-  if (sessionStorage.getItem('paleto_auth') !== 'true') {
+if (sessionStorage.getItem('paleto_auth') !== 'true') {
     alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
     window.location.href = 'index.html';
   }
