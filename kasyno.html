@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WaveMatch Game</title>
+  <title>Digital Den - WaveMatch & Untangle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --wm-purple: #6b67ef;
@@ -11,15 +12,41 @@
       --green: #5cff8a;
       --accent2: #ff4d4d;
       --accent: #4dd8ff;
+      --untangle-node: #00bfff;
+      --untangle-node-glow: rgba(0, 191, 255, 0.9);
     }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
 
     body {
       margin: 0;
       background: #0a0c10;
       color: #fff;
-      font-family: system-ui, -apple-system, sans-serif;
-      overflow-x: hidden;
+      font-family: 'Roboto', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+      background-image: radial-gradient(#1f2937 2px, transparent 2px);
+      background-size: 25px 25px;
     }
+
+    .btn-back { 
+      position: absolute; 
+      top: 20px; 
+      left: 20px; 
+      background: #131822; 
+      border: 1px solid #1f2937; 
+      color: #4dd8ff; 
+      padding: 8px 16px; 
+      border-radius: 6px; 
+      font-family: 'Teko', sans-serif; 
+      font-size: 20px; 
+      text-decoration: none; 
+      transition: 0.2s; 
+      z-index: 200; 
+    }
+    .btn-back:hover { background: #1a2332; border-color: #4dd8ff; }
 
     .view {
       display: none;
@@ -31,10 +58,92 @@
     }
 
     .view.active {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ---------- MENU WYBORU ETAPÓW ---------- */
+    #view-menu {
+      z-index: 150;
+      background: #0a0c10;
+    }
+
+    .menu-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: min(500px, 90vw);
+      background: #111318;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+      text-align: center;
+    }
+
+    .menu-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .menu-title span { color: var(--accent); }
+
+    .menu-sub {
+      font-size: 14px;
+      color: #8b949e;
+      margin-bottom: 30px;
+      letter-spacing: 0.3px;
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      width: 100%;
+    }
+
+    .menu-btn {
+      background: #131822;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 14px 20px;
+      font-size: 26px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Teko', sans-serif;
+      letter-spacing: 1.5px;
+      box-shadow: 0 0 15px rgba(77,216,255,0.15);
+      transition: 0.2s;
+    }
+
+    .menu-btn:hover {
+      background: #1a2332;
+      box-shadow: 0 0 25px rgba(77,216,255,0.4);
+      transform: translateY(-2px);
+    }
+
+    .menu-btn.stage2 {
+      border-color: var(--untangle-node);
+      color: var(--untangle-node);
+      box-shadow: 0 0 15px rgba(0,191,255,0.15);
+    }
+
+    .menu-btn.stage2:hover {
+      box-shadow: 0 0 25px rgba(0,191,255,0.4);
     }
 
     /* ---------- GRA 3: WaveMatch ---------- */
+    #view-game3 {
+      background: #0a0c10;
+    }
+
     #app3 {
       height: 100%;
       width: 100%;
@@ -43,7 +152,6 @@
       align-items: center;
       justify-content: center;
       padding: 8vh 0 3vh;
-      box-sizing: border-box;
     }
 
     #wm-wrap {
@@ -69,17 +177,19 @@
     }
 
     #wm-title {
-      font-size: 22px;
+      font-family: 'Teko', sans-serif;
+      font-size: 32px;
       font-weight: 800;
       letter-spacing: 0.5px;
       color: #fff;
       display: flex;
       align-items: baseline;
+      line-height: 1;
     }
 
     #wm-title span { color: var(--wm-purple); }
     #wm-sub { opacity: 0.55; font-size: 12px; letter-spacing: 0.2px; font-weight: 400; }
-    #wm-iter { opacity: 0.55; margin-left: auto; }
+    #wm-iter { opacity: 0.55; margin-left: auto; font-family: 'Teko', sans-serif; font-size: 18px; }
     #wm-match-pct { opacity: 0.85; font-size: 12px; }
 
     .wm-sl-label {
@@ -93,7 +203,7 @@
 
     #wm-canvas-wrap {
       width: 100%;
-      height: 32vh;
+      height: 28vh;
       position: relative;
       overflow: hidden;
       background: rgba(255,255,255,0.035);
@@ -153,7 +263,7 @@
       width: 100%;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 1.1vh 1.6vh;
+      gap: 1vh 1.6vh;
       margin-top: 0.3vh;
     }
 
@@ -163,7 +273,7 @@
       width: 100%;
       -webkit-appearance: none;
       appearance: none;
-      height: 10px;
+      height: 8px;
       border-radius: 6px;
       outline: none;
       cursor: pointer;
@@ -173,40 +283,109 @@
 
     .wm-range::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 14px;
-      height: 24px;
+      width: 12px;
+      height: 20px;
       background: #f1f1f8;
-      border-radius: 3px;
-      cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-      transition: transform 0.08s;
-    }
-
-    .wm-range::-webkit-slider-thumb:hover { transform: scaleY(1.08); }
-    .wm-range::-moz-range-thumb {
-      width: 14px;
-      height: 24px;
-      background: #f1f1f8;
-      border: none;
       border-radius: 3px;
       cursor: pointer;
       box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
 
     .wm-range:disabled { opacity: 0.28; cursor: default; }
-    .wm-range:disabled::-webkit-slider-thumb { cursor: default; }
 
-    /* Overlay */
+    /* ---------- GRA 9: Untangle ---------- */
+    #view-game9 {
+      background: #0a0c10;
+    }
+
+    #app9 {
+      height: 100%; width: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 6vh 0 2vh;
+    }
+    #g9-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      width: min(600px, 65vh, 85vw); gap: 1.6vh;
+      z-index: 10;
+      background: #111318;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 18px 22px 22px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    }
+    #g9-header { width: 100%; }
+    #g9-title {
+      font-family: 'Teko', sans-serif;
+      font-size: 38px; font-weight: 700; letter-spacing: 1px; color: #fff;
+      line-height: 1;
+    }
+    #g9-title span { color: var(--untangle-node); text-shadow: 0 0 15px rgba(0,191,255,0.7); }
+    #g9-sub { font-size: 13px; opacity: 0.7; letter-spacing: 0.3px; margin-top: 2px; color: #8b949e; }
+    
+    #g9-canvas-wrap {
+      position: relative; width: 100%; aspect-ratio: 1/1;
+      background: rgba(13, 20, 30, 0.85);
+      border: 1px solid #1f3a5f;
+      box-shadow: inset 0 0 30px rgba(0, 191, 255, 0.05);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #g9-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    
+    .g9-node {
+      position: absolute; width: 28px; height: 28px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #85e3ff, var(--untangle-node));
+      box-shadow: 0 0 16px 5px var(--untangle-node-glow);
+      transform: translate(-50%,-50%);
+      cursor: grab;
+      z-index: 2;
+      border: 2px solid #ffffff;
+    }
+    .g9-node:active { cursor: grabbing; transform: translate(-50%,-50%) scale(1.15); }
+    
+    .g9-stage-notice {
+      position: absolute; top: 50%; left: 50%; z-index: 5;
+      transform: translate(-50%,-50%) scale(0.92);
+      padding: 14px 26px; border-radius: 10px;
+      background: rgba(11, 15, 20, 0.95);
+      border: 1px solid var(--untangle-node);
+      box-shadow: 0 0 26px var(--untangle-node-glow);
+      color: #fff; font-weight: 700; letter-spacing: 1.5px; font-size: 14px; text-transform: uppercase;
+      font-family: 'Teko', sans-serif;
+      text-align: center; white-space: nowrap;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+    .g9-stage-notice.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    
+    #g9-timer-wrap {
+      width: 100%; height: 9px; border-radius: 6px; overflow: hidden;
+      background: rgba(31, 41, 55, 0.6);
+      border: 1px solid #1f2937;
+    }
+    #g9-timer-bar {
+      height: 100%; width: 100%; border-radius: 6px;
+      background: linear-gradient(90deg, #0055ff, var(--untangle-node));
+      box-shadow: 0 0 12px var(--untangle-node-glow);
+      transition: width 0.1s linear;
+    }
+    #g9-progress { 
+      font-family: 'Teko', sans-serif;
+      font-size: 20px; letter-spacing: 2px; opacity: 0.8; align-self: flex-start; color: #8b949e; 
+    }
+    #g9-progress b { color: var(--untangle-node); }
+
+    /* Overlay wspólny */
     .overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(10, 12, 16, 0.85);
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 12, 16, 0.88);
       backdrop-filter: blur(8px);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 100;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.3s ease;
@@ -217,27 +396,29 @@
       pointer-events: auto;
     }
 
-    .overlay h1 { font-size: 36px; margin: 0 0 10px; }
-    .overlay h1.win { color: var(--green); }
-    .overlay h1.lose { color: var(--accent2); }
-    .overlay p { font-size: 16px; opacity: 0.7; margin: 0 0 20px; }
-    .overlay .hint { font-size: 18px; color: var(--accent); margin-bottom: 15px; }
-    .overlay .countdown { font-size: 48px; font-weight: bold; color: var(--wm-purple); }
+    .overlay h1 { font-family: 'Teko', sans-serif; font-size: 52px; margin: 0 0 10px; letter-spacing: 2px; }
+    .overlay h1.win { color: var(--green); text-shadow: 0 0 20px rgba(92,255,138,0.4); }
+    .overlay h1.lose { color: var(--accent2); text-shadow: 0 0 20px rgba(255,77,77,0.4); }
+    .overlay p { font-size: 16px; opacity: 0.7; margin: 0 0 20px; color: #8b949e; }
+    .overlay .hint { font-size: 22px; color: var(--accent); margin-bottom: 15px; font-family: 'Teko', sans-serif; letter-spacing: 1px; animation: pulse 1.5s infinite; }
+    .overlay .countdown { font-family: 'Teko', sans-serif; font-size: 64px; font-weight: bold; color: var(--wm-purple); text-shadow: 0 0 20px rgba(107,103,239,0.6); }
 
     .overlay button {
-      background: var(--wm-purple);
-      border: none;
-      color: white;
-      padding: 12px 24px;
-      font-size: 14px;
+      background: #131822;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 10px 24px;
+      font-size: 22px;
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
-      box-shadow: 0 0 15px var(--wm-purple-glow);
-      transition: transform 0.1s;
+      font-family: 'Teko', sans-serif;
+      letter-spacing: 1px;
+      box-shadow: 0 0 15px rgba(77,216,255,0.25);
+      transition: 0.2s;
     }
 
-    .overlay button:hover { transform: scale(1.05); }
+    .overlay button:hover { background: #1a2332; box-shadow: 0 0 25px rgba(77,216,255,0.5); }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
@@ -247,415 +428,824 @@
 </head>
 <body>
 
-  <!-- ============ WIDOK: GRA 3 (wave match) ============ -->
-  <div id="view-game3" class="view active">
-    <div id="app3">
-      <div id="wm-wrap" class="wm-a11y">
-        <div id="wm-header">
-          <div id="wm-title">WAVE<span>MATCH</span></div>
-          <div id="wm-sub">Zmieniaj parametry, aby dopasować falę.</div>
-          <div id="wm-iter"></div>
-          <div id="wm-match-pct">0%</div>
+<a href="index.html" id="btn-back-main" class="btn-back" style="display:none;">◄ POWRÓT DO MENU</a>
+
+<!-- ============ MENU WYBORU ETAPÓW ============ -->
+<div id="view-menu" class="view active">
+  <div class="menu-container">
+    <div class="menu-title">WYBIERZ <span>ETAP</span></div>
+    <div class="menu-sub">Wybierz, od którego zabezpieczenia chcesz zacząć.</div>
+    <div class="menu-buttons">
+      <button class="menu-btn" id="btn-stage1">ETAP 1: WAVE MATCH</button>
+      <button class="menu-btn stage2" id="btn-stage2">ETAP 2: UNTANGLE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ETAP 1: WAVE MATCH ============ -->
+<div id="view-game3" class="view">
+  <div id="app3">
+    <div id="wm-wrap">
+      <div id="wm-header">
+        <div id="wm-title">ETAP 1: WAVE<span>MATCH</span></div>
+        <div id="wm-sub">Dopasuj parametry fali do wzorca.</div>
+        <div id="wm-iter"></div>
+        <div id="wm-match-pct">0%</div>
+      </div>
+      <div id="wm-canvas-wrap">
+        <canvas id="wm-canvas-target"></canvas>
+        <canvas id="wm-canvas-user"></canvas>
+      </div>
+      <div id="wm-match-wrap"><div id="wm-match-bar"></div></div>
+      <div id="wm-timer-wrap"><div id="wm-timer-bar"></div></div>
+      <div id="wm-sliders">
+        <div class="wm-sg">
+          <div class="wm-sl-label"><span>SPEED</span><span id="wm-speed-val">1.00</span></div>
+          <input type="range" id="wm-speed" class="wm-range">
         </div>
-        <div id="wm-canvas-wrap">
-          <canvas id="wm-canvas-target"></canvas>
-          <canvas id="wm-canvas-user"></canvas>
+        <div class="wm-sg">
+          <div class="wm-sl-label"><span>AMPLITUDE</span><span id="wm-amplitude-val">1.00</span></div>
+          <input type="range" id="wm-amplitude" class="wm-range">
         </div>
-        <div id="wm-match-wrap"><div id="wm-match-bar"></div></div>
-        <div id="wm-timer-wrap"><div id="wm-timer-bar"></div></div>
-        <div id="wm-sliders">
-          <div class="wm-sg">
-            <div class="wm-sl-label"><span>SPEED</span><span id="wm-speed-val">1.00</span></div>
-            <input type="range" id="wm-speed" class="wm-range">
-          </div>
-          <div class="wm-sg">
-            <div class="wm-sl-label"><span>AMPLITUDE</span><span id="wm-amplitude-val">1.00</span></div>
-            <input type="range" id="wm-amplitude" class="wm-range">
-          </div>
-          <div class="wm-sg">
-            <div class="wm-sl-label"><span>WAVELENGTH</span><span id="wm-wavelength-val">1.00</span></div>
-            <input type="range" id="wm-wavelength" class="wm-range">
-          </div>
-          <div class="wm-sg">
-            <div class="wm-sl-label"><span>SMOOTHNESS</span><span id="wm-segmentLength-val">1.00</span></div>
-            <input type="range" id="wm-segmentLength" class="wm-range">
-          </div>
-          <div class="wm-sg">
-            <div class="wm-sl-label"><span>WIDTH</span><span id="wm-lineWidth-val">10.00</span></div>
-            <input type="range" id="wm-lineWidth" class="wm-range">
-          </div>
-          <div class="wm-sg">
-            <div class="wm-sl-label"><span>PHASE</span><span id="wm-timeModifier-val">1.00</span></div>
-            <input type="range" id="wm-timeModifier" class="wm-range">
-          </div>
+        <div class="wm-sg">
+          <div class="wm-sl-label"><span>WAVELENGTH</span><span id="wm-wavelength-val">1.00</span></div>
+          <input type="range" id="wm-wavelength" class="wm-range">
+        </div>
+        <div class="wm-sg">
+          <div class="wm-sl-label"><span>SMOOTHNESS</span><span id="wm-segmentLength-val">1.00</span></div>
+          <input type="range" id="wm-segmentLength" class="wm-range">
+        </div>
+        <div class="wm-sg">
+          <div class="wm-sl-label"><span>WIDTH</span><span id="wm-lineWidth-val">10.00</span></div>
+          <input type="range" id="wm-lineWidth" class="wm-range">
+        </div>
+        <div class="wm-sg">
+          <div class="wm-sl-label"><span>PHASE</span><span id="wm-timeModifier-val">1.00</span></div>
+          <input type="range" id="wm-timeModifier" class="wm-range">
         </div>
       </div>
     </div>
-    
-    <div id="overlay3" class="overlay show">
-      <h1 id="overlayTitle3"></h1>
-      <p id="overlaySub3"></p>
-      <div id="overlayHint3" class="hint">Naciśnij SPACJĘ, aby rozpocząć</div>
-      <div id="overlayCountdown3" class="countdown" style="display:none;"></div>
-      <button id="restartBtn3" style="display:none;">SPRÓBUJ PONOWNIE</button>
-      <div id="spacePassHint3" style="display:none; font-size:14px; letter-spacing:2px; color:var(--accent); padding:10px 22px; border:1px solid rgba(77,216,255,0.45); border-radius:6px; animation:pulse 1.1s ease-in-out infinite; margin-top: 15px;">[ SPACJA ] → nowa próba</div>
+  </div>
+  
+  <div id="overlay3" class="overlay show">
+    <h1 id="overlayTitle3">ETAP 1: WAVE MATCH</h1>
+    <p id="overlaySub3">Zmieniaj suwaki, aby w pełni pokryć wzorzec fali.</p>
+    <div id="overlayHint3" class="hint">Naciśnij SPACJĘ, aby rozpocząć</div>
+    <div id="overlayCountdown3" class="countdown" style="display:none;"></div>
+    <button id="restartBtn3" style="display:none;">SPRÓBUJ PONOWNIE</button>
+  </div>
+</div>
+
+<!-- ============ ETAP 2: UNTANGLE ============ -->
+<div id="view-game9" class="view">
+  <div id="app9">
+    <div id="g9-wrap">
+      <div id="g9-header">
+        <div id="g9-title">ETAP 2: <span>UN</span>TANGLE</div>
+        <div id="g9-sub">Upewnij się, że żadne linie się nie przecinają.</div>
+      </div>
+      <div id="g9-canvas-wrap">
+        <canvas id="g9-canvas"></canvas>
+        <div id="g9-stage-notice" class="g9-stage-notice"></div>
+      </div>
+      <div id="g9-timer-wrap"><div id="g9-timer-bar"></div></div>
+      <div id="g9-progress">RUNDA <b id="g9-progress-val">1</b> / <span id="g9-progress-total">3</span></div>
     </div>
   </div>
+  <div id="overlay9" class="overlay">
+    <h1 id="overlayTitle9">ETAP 2: UNTANGLE</h1>
+    <p id="overlaySub9">Przeciągaj węzły, aby rozplątać wszystkie przecięcia linii.</p>
+    <div id="overlayHint9" class="hint">Naciśnij SPACJĘ, aby rozpocząć etap.</div>
+    <div id="overlayCountdown9" class="countdown" style="display:none;"></div>
+    <button id="restartBtn9" style="display:none;">SPRÓBUJ PONOWNIE</button>
+  </div>
+</div>
 
-  <script>
-    if (sessionStorage.getItem('paleto_auth') !== 'true') {
+<script>
+  if (sessionStorage.getItem('paleto_auth') !== 'true') {
     alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
     window.location.href = 'index.html';
   }
-    const CONFIG_GAME3 = {
-      ROUNDS: 3,
-      DURATION_MS: 15000,
-      MATCH_THRESHOLD: 98, // Wymagane niemal 100% dokładności
-      TARGET_WAVE_COLOR: '#6b67ef',
-      USER_WAVE_COLOR: '#ffffff'
-    };
 
-    let currentView = 'view-game3';
-    let TEXT_LOSE = 'PORAŻKA';
-    let TEXT_WIN = 'WYGRANA!';
-    let TEXT_HINT = 'Naciśnij SPACJĘ, aby rozpocząć';
+  let audioCtx = null;
+  function initAudio(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }
 
-    const Game3 = (function(){
-      const overlay            = document.getElementById('overlay3');
-      const overlayTitle       = document.getElementById('overlayTitle3');
-      const overlaySub         = document.getElementById('overlaySub3');
-      const overlayHint        = document.getElementById('overlayHint3');
-      const overlayCountdown   = document.getElementById('overlayCountdown3');
-      const restartBtn         = document.getElementById('restartBtn3');
-      const spacePassHint      = document.getElementById('spacePassHint3');
-      const canvasWrap         = document.getElementById('wm-canvas-wrap');
-      const canvasTarget       = document.getElementById('wm-canvas-target');
-      const canvasUser         = document.getElementById('wm-canvas-user');
-      const matchBar           = document.getElementById('wm-match-bar');
-      const matchPctEl         = document.getElementById('wm-match-pct');
-      const timerBarEl         = document.getElementById('wm-timer-bar');
-      const iterEl             = document.getElementById('wm-iter');
+  function playTone(freq, duration, type='sine'){
+    try {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  }
 
-      let TARGET_COLOR = CONFIG_GAME3.TARGET_WAVE_COLOR;
-      let USER_COLOR   = CONFIG_GAME3.USER_WAVE_COLOR;
+  function flashColor(color){
+    const flash = document.createElement('div');
+    flash.style.position = 'fixed';
+    flash.style.inset = '0';
+    flash.style.background = color;
+    flash.style.zIndex = '250';
+    flash.style.pointerEvents = 'none';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 200);
+  }
 
-      const WAVE_KEYS  = ['speed','amplitude','wavelength','segmentLength','lineWidth','timeModifier'];
-      const MIN_WAVE   = {speed:.1,  amplitude:0,   wavelength:0.5,  segmentLength:.1, lineWidth:10, timeModifier:.1};
-      const MAX_WAVE   = {speed:5,   amplitude:100, wavelength:10,   segmentLength:10, lineWidth:30, timeModifier:1};
-      const STEP_WAVE  = {speed:.1,  amplitude:.1,  wavelength:.1,   segmentLength:.1, lineWidth:.1, timeModifier:.01};
-      const DEFAULT_WAVE = {speed:1, amplitude:1,   wavelength:1,    segmentLength:1,  lineWidth:10, timeModifier:1};
+  let currentView = 'view-menu';
 
-      let TOTAL_ROUNDS = CONFIG_GAME3.ROUNDS;
-      let DURATION_MS  = CONFIG_GAME3.DURATION_MS;
-      const MATCH_THRESHOLD = CONFIG_GAME3.MATCH_THRESHOLD;
+  function switchView(viewId){
+    currentView = viewId;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    
+    const backBtn = document.getElementById('btn-back-main');
+    if(viewId === 'view-menu'){
+      backBtn.style.display = 'block';
+      backBtn.href = 'index.html';
+    } else {
+      backBtn.style.display = 'block';
+      backBtn.href = '#';
+      backBtn.onclick = (e) => {
+        e.preventDefault();
+        if(viewId === 'view-game3') Game3.goToStartScreen();
+        if(viewId === 'view-game9') Game9.goToStartScreen();
+        switchView('view-menu');
+      };
+    }
+  }
 
-      const SLIDERS = {};
-      WAVE_KEYS.forEach(k => { SLIDERS[k] = document.getElementById('wm-' + k); });
+  document.getElementById('btn-stage1').addEventListener('click', () => {
+    switchView('view-game3');
+    Game3.goToStartScreen();
+  });
 
-      function updateSliderFill(el){
-        if(!el) return;
-        const mn = parseFloat(el.min||0), mx = parseFloat(el.max||100), v = parseFloat(el.value||0);
-        const pct = mx > mn ? ((v - mn) / (mx - mn) * 100).toFixed(1) + '%' : '0%';
-        el.style.setProperty('--sl-fill', pct);
+  document.getElementById('btn-stage2').addEventListener('click', () => {
+    switchView('view-game9');
+    Game9.goToStartScreen();
+  });
+
+  // ==========================================
+  // GRA 3: WAVE MATCH (ETAP 1)
+  // ==========================================
+  const CONFIG_GAME3 = {
+    ROUNDS: 3,
+    DURATION_MS: 15000,
+    MATCH_THRESHOLD: 98,
+    TARGET_WAVE_COLOR: '#6b67ef',
+    USER_WAVE_COLOR: '#ffffff'
+  };
+
+  const Game3 = (function(){
+    const overlay         = document.getElementById('overlay3');
+    const overlayTitle    = document.getElementById('overlayTitle3');
+    const overlaySub      = document.getElementById('overlaySub3');
+    const overlayHint     = document.getElementById('overlayHint3');
+    const overlayCountdown= document.getElementById('overlayCountdown3');
+    const restartBtn      = document.getElementById('restartBtn3');
+    const canvasWrap      = document.getElementById('wm-canvas-wrap');
+    const canvasTarget    = document.getElementById('wm-canvas-target');
+    const canvasUser      = document.getElementById('wm-canvas-user');
+    const matchBar        = document.getElementById('wm-match-bar');
+    const matchPctEl      = document.getElementById('wm-match-pct');
+    const timerBarEl      = document.getElementById('wm-timer-bar');
+    const iterEl          = document.getElementById('wm-iter');
+
+    let TARGET_COLOR = CONFIG_GAME3.TARGET_WAVE_COLOR;
+    let USER_COLOR   = CONFIG_GAME3.USER_WAVE_COLOR;
+
+    const WAVE_KEYS  = ['speed','amplitude','wavelength','segmentLength','lineWidth','timeModifier'];
+    const MIN_WAVE   = {speed:.1,  amplitude:0,   wavelength:0.5,  segmentLength:.1, lineWidth:10, timeModifier:.1};
+    const MAX_WAVE   = {speed:5,   amplitude:100, wavelength:10,   segmentLength:10, lineWidth:30, timeModifier:1};
+    const STEP_WAVE  = {speed:.1,  amplitude:.1,  wavelength:.1,   segmentLength:.1, lineWidth:.1, timeModifier:.01};
+    const DEFAULT_WAVE = {speed:1, amplitude:1,   wavelength:1,    segmentLength:1,  lineWidth:10, timeModifier:1};
+
+    let TOTAL_ROUNDS = CONFIG_GAME3.ROUNDS;
+    let DURATION_MS  = CONFIG_GAME3.DURATION_MS;
+    const MATCH_THRESHOLD = CONFIG_GAME3.MATCH_THRESHOLD;
+
+    const SLIDERS = {};
+    WAVE_KEYS.forEach(k => { SLIDERS[k] = document.getElementById('wm-' + k); });
+
+    function updateSliderFill(el){
+      if(!el) return;
+      const mn = parseFloat(el.min||0), mx = parseFloat(el.max||100), v = parseFloat(el.value||0);
+      const pct = mx > mn ? ((v - mn) / (mx - mn) * 100).toFixed(1) + '%' : '0%';
+      el.style.setProperty('--sl-fill', pct);
+    }
+    function updateAllFills(){ WAVE_KEYS.forEach(k => updateSliderFill(SLIDERS[k])); }
+
+    class SineWaveGenerator {
+      constructor(canvas, w, h, opts){
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width  = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        canvas.style.width  = w + 'px';
+        canvas.style.height = h + 'px';
+        this.ctx = canvas.getContext('2d');
+        this.ctx.scale(dpr, dpr);
+        this.w = w; this.h = h;
+        this.waveLeft  = w * 0.025;
+        this.waveWidth = w * 0.95;
+        this.time = 0;
+        this.wave = Object.assign(
+          {speed:10,amplitude:50,wavelength:50,segmentLength:10,lineWidth:2,strokeStyle:'white',timeModifier:1},
+          opts
+        );
       }
-      function updateAllFills(){ WAVE_KEYS.forEach(k => updateSliderFill(SLIDERS[k])); }
+      update(o){ Object.assign(this.wave, o); }
+      ease(x, amp){ return amp * (Math.sin(x * Math.PI * 2 - Math.PI / 2) + 1) * 0.5; }
+      draw(time){
+        const {speed,amplitude,wavelength,lineWidth,strokeStyle,segmentLength} = this.wave;
+        const seg = Math.max(segmentLength, 0.1);
+        const wl  = wavelength || 0.001;
+        const c   = this.h / 2;
+        const thickness = Math.max(lineWidth, 8);
 
-      class SineWaveGenerator {
-        constructor(canvas, w, h, opts){
-          const dpr = window.devicePixelRatio || 1;
-          canvas.width  = Math.round(w * dpr);
-          canvas.height = Math.round(h * dpr);
-          canvas.style.width  = w + 'px';
-          canvas.style.height = h + 'px';
-          this.ctx = canvas.getContext('2d');
-          this.ctx.scale(dpr, dpr);
-          this.w = w; this.h = h;
-          this.waveLeft  = w * 0.025;
-          this.waveWidth = w * 0.95;
-          this.time = 0;
-          this.wave = Object.assign(
-            {speed:10,amplitude:50,wavelength:50,segmentLength:10,lineWidth:2,strokeStyle:'white',timeModifier:1},
-            opts
-          );
+        const path = new Path2D();
+        path.moveTo(0, c);
+        path.lineTo(this.waveLeft, c);
+        for(let d = 0; d < this.waveWidth; d += seg){
+          const o  = time * speed + (-c + d) / wl;
+          const u  = Math.sin(o);
+          const f  = this.ease(d / this.waveWidth, amplitude * 1.5);
+          path.lineTo(d + this.waveLeft, f * u + c);
         }
-        update(o){ Object.assign(this.wave, o); }
-        ease(x, amp){ return amp * (Math.sin(x * Math.PI * 2 - Math.PI / 2) + 1) * 0.5; }
-        draw(time){
-          const {speed,amplitude,wavelength,lineWidth,strokeStyle,segmentLength} = this.wave;
-          const seg = Math.max(segmentLength, 0.1);
-          const wl  = wavelength || 0.001;
-          const c   = this.h / 2;
-          const thickness = Math.max(lineWidth, 8);
+        path.lineTo(this.w, c);
 
-          const path = new Path2D();
-          path.moveTo(0, c);
-          path.lineTo(this.waveLeft, c);
-          for(let d = 0; d < this.waveWidth; d += seg){
-            const o  = time * speed + (-c + d) / wl;
-            const u  = Math.sin(o);
-            const f  = this.ease(d / this.waveWidth, amplitude * 1.5);
-            path.lineTo(d + this.waveLeft, f * u + c);
-          }
-          path.lineTo(this.w, c);
+        this.ctx.save();
+        this.ctx.lineJoin = 'round';
+        this.ctx.lineCap  = 'round';
 
-          this.ctx.save();
-          this.ctx.lineJoin = 'round';
-          this.ctx.lineCap  = 'round';
+        this.ctx.shadowColor = strokeStyle;
+        this.ctx.shadowBlur  = Math.min(thickness * 0.9, 18);
+        this.ctx.globalAlpha = 0.55;
+        this.ctx.lineWidth   = thickness * 1.35;
+        this.ctx.strokeStyle = strokeStyle;
+        this.ctx.stroke(path);
 
-          this.ctx.shadowColor = strokeStyle;
-          this.ctx.shadowBlur  = Math.min(thickness * 0.9, 18);
-          this.ctx.globalAlpha = 0.55;
-          this.ctx.lineWidth   = thickness * 1.35;
-          this.ctx.strokeStyle = strokeStyle;
-          this.ctx.stroke(path);
+        this.ctx.shadowBlur  = Math.min(thickness * 0.5, 10);
+        this.ctx.globalAlpha = 1;
+        this.ctx.lineWidth   = thickness;
+        this.ctx.stroke(path);
 
-          this.ctx.shadowBlur  = Math.min(thickness * 0.5, 10);
-          this.ctx.globalAlpha = 1;
-          this.ctx.lineWidth   = thickness;
-          this.ctx.stroke(path);
-
-          this.ctx.restore();
-        }
-        clear(){ this.ctx.clearRect(0, 0, this.w, this.h); }
-        render(){ this.clear(); this.time -= 0.1; this.draw(this.time * this.wave.timeModifier); }
-        destroy(){ this.ctx.clearRect(0, 0, this.w, this.h); }
+        this.ctx.restore();
       }
+      clear(){ this.ctx.clearRect(0, 0, this.w, this.h); }
+      render(){ this.clear(); this.time -= 0.1; this.draw(this.time * this.wave.timeModifier); }
+      destroy(){ this.ctx.clearRect(0, 0, this.w, this.h); }
+    }
 
-      let waitingForSpace = true, roundRunning = false, spaceToPass = false;
-      let gameOver = false, iterLocked = false, currentRound = 1, score = 0, matchPct = 0;
-      let targetWave = null, userWave = null, targetGen = null, userGen = null;
-      let rafId = null, timerTimeout = null, pendingSetup = null;
-      let countdownTimeout = null, winTransTimeout = null;
+    let waitingForSpace = true, roundRunning = false;
+    let gameOver = false, iterLocked = false, currentRound = 1, score = 0, matchPct = 0;
+    let targetWave = null, userWave = null, targetGen = null, userGen = null;
+    let rafId = null, timerTimeout = null, pendingSetup = null;
+    let countdownTimeout = null, winTransTimeout = null;
 
-      function setupSliders(){
-        WAVE_KEYS.forEach(k => {
-          const sl = SLIDERS[k];
-          if(!sl) return;
-          sl.min = MIN_WAVE[k]; sl.max = MAX_WAVE[k]; sl.step = STEP_WAVE[k];
-          sl.addEventListener('input', () => {
-            if(!roundRunning || iterLocked) return;
-            userWave[k] = parseFloat(sl.value);
-            const v = document.getElementById('wm-' + k + '-val');
-            if(v) v.textContent = parseFloat(sl.value).toFixed(2);
-            updateSliderFill(sl);
-            if(userGen) userGen.update({[k]: userWave[k]});
-            checkMatch();
-          });
-        });
-      }
-
-      function setSliderValues(wave){
-        WAVE_KEYS.forEach(k => {
-          if(!SLIDERS[k]) return;
-          SLIDERS[k].value = wave[k]; 
-          SLIDERS[k].disabled = false;
+    function setupSliders(){
+      WAVE_KEYS.forEach(k => {
+        const sl = SLIDERS[k];
+        if(!sl) return;
+        sl.min = MIN_WAVE[k]; sl.max = MAX_WAVE[k]; sl.step = STEP_WAVE[k];
+        sl.addEventListener('input', () => {
+          if(!roundRunning || iterLocked) return;
+          userWave[k] = parseFloat(sl.value);
           const v = document.getElementById('wm-' + k + '-val');
-          if(v) v.textContent = parseFloat(wave[k]).toFixed(2);
+          if(v) v.textContent = parseFloat(sl.value).toFixed(2);
+          updateSliderFill(sl);
+          if(userGen) userGen.update({[k]: userWave[k]});
+          checkMatch();
         });
-        updateAllFills();
-      }
+      });
+    }
 
-      function lockSliders(){ 
-        WAVE_KEYS.forEach(k => { if(SLIDERS[k]) SLIDERS[k].disabled = true; }); 
-        updateAllFills(); 
-      }
+    function setSliderValues(wave){
+      WAVE_KEYS.forEach(k => {
+        if(!SLIDERS[k]) return;
+        SLIDERS[k].value = wave[k]; 
+        SLIDERS[k].disabled = false;
+        const v = document.getElementById('wm-' + k + '-val');
+        if(v) v.textContent = parseFloat(wave[k]).toFixed(2);
+      });
+      updateAllFills();
+    }
 
-      function checkMatch(){
-        if(!userWave || !targetWave || iterLocked) return;
-        let totalScore = 0;
+    function lockSliders(){ 
+      WAVE_KEYS.forEach(k => { if(SLIDERS[k]) SLIDERS[k].disabled = true; }); 
+      updateAllFills(); 
+    }
+
+    function checkMatch(){
+      if(!userWave || !targetWave || iterLocked) return;
+      let totalScore = 0;
+      
+      for(const k of WAVE_KEYS){
+        const u = userWave[k];
+        const t = targetWave[k];
+        const mn = MIN_WAVE[k];
+        const mx = MAX_WAVE[k];
+        const range = mx - mn;
         
-        for(const k of WAVE_KEYS){
-          const u = userWave[k];
-          const t = targetWave[k];
-          const mn = MIN_WAVE[k];
-          const mx = MAX_WAVE[k];
-          const range = mx - mn;
-          
-          if(range > 0){
-            // Bezpośrednia różnica bezwzględna między wartością użytkownika a celem
-            const diff = Math.abs(u - t);
-            // Wyliczamy dokładność procentową dla tego parametru (100% = idealnie to samo)
-            const paramAccuracy = Math.max(0, 100 * (1 - (diff / range)));
-            totalScore += paramAccuracy;
-          } else {
-            totalScore += 100;
+        if(range > 0){
+          const diff = Math.abs(u - t);
+          const paramAccuracy = Math.max(0, 100 * (1 - (diff / range)));
+          totalScore += paramAccuracy;
+        } else {
+          totalScore += 100;
+        }
+      }
+      
+      matchPct = Math.round(totalScore / WAVE_KEYS.length);
+      if(matchBar) matchBar.style.width = matchPct + '%';
+      if(matchPctEl) matchPctEl.textContent = matchPct + '%';
+      
+      if(matchPct >= MATCH_THRESHOLD) {
+        winRound();
+      }
+    }
+
+    function animateLoop(){
+      if(!roundRunning) return;
+      if(targetGen) targetGen.render();
+      if(userGen)   userGen.render();
+      rafId = requestAnimationFrame(animateLoop);
+    }
+
+    function startTimer(){
+      if(!timerBarEl) return;
+      timerBarEl.style.transition = 'none';
+      timerBarEl.style.width = '100%';
+      void timerBarEl.getBoundingClientRect();
+      timerBarEl.style.transition = 'width ' + DURATION_MS + 'ms linear';
+      timerBarEl.style.width = '0%';
+      timerTimeout = setTimeout(() => { if(roundRunning) failRound('Czas minął.'); }, DURATION_MS);
+    }
+
+    function stopTimer(){
+      clearTimeout(timerTimeout);
+      if(!timerBarEl) return;
+      const w = getComputedStyle(timerBarEl).width;
+      timerBarEl.style.transition = 'none'; 
+      timerBarEl.style.width = w;
+    }
+
+    function generateTargetWave(){
+      const t = {};
+      for(const k of WAVE_KEYS){
+        const mn = MIN_WAVE[k], mx = MAX_WAVE[k], st = STEP_WAVE[k];
+        const stepsCount = Math.floor((mx - mn) / st);
+        const randomStep = Math.floor(Math.random() * (stepsCount + 1));
+        t[k] = parseFloat((mn + randomStep * st).toFixed(2));
+      }
+      return t;
+    }
+
+    function startRound(){
+      iterLocked = false;
+      if(matchBar) {
+        matchBar.classList.remove('wm-win','wm-fail'); 
+        matchBar.style.width = '0%';
+      }
+      if(matchPctEl) matchPctEl.textContent = '0%';
+      if(iterEl) iterEl.textContent = 'RUNDA ' + currentRound + ' / ' + TOTAL_ROUNDS;
+      
+      targetWave = generateTargetWave();
+      userWave   = Object.assign({}, DEFAULT_WAVE);
+      setSliderValues(userWave); 
+      
+      pendingSetup = setTimeout(() => {
+        pendingSetup = null;
+        if(roundRunning || gameOver) return;
+        const cw = canvasWrap.clientWidth || 600, ch = canvasWrap.clientHeight || 200;
+        if(!cw || !ch) return;
+        
+        targetGen = new SineWaveGenerator(canvasTarget, cw, ch,
+          Object.assign({strokeStyle: TARGET_COLOR}, targetWave));
+        userGen   = new SineWaveGenerator(canvasUser,  cw, ch,
+          Object.assign({strokeStyle: USER_COLOR}, DEFAULT_WAVE));
+        
+        roundRunning = true; 
+        animateLoop(); 
+        startTimer();
+      }, 500);
+    }
+
+    function winRound(){
+      if(iterLocked) return;
+      iterLocked = true; roundRunning = false;
+      stopTimer(); cancelAnimationFrame(rafId); lockSliders();
+      if(matchBar) matchBar.classList.add('wm-win');
+      playTone(660,0.15,'sine'); setTimeout(()=>playTone(880,0.12,'sine'),150);
+      score += Math.round(matchPct * 10); 
+      
+      winTransTimeout = setTimeout(() => {
+        winTransTimeout = null;
+        if(gameOver) return;
+        currentRound++;
+        if(currentRound <= TOTAL_ROUNDS){ startRound(); } else { finishStage1(); }
+      }, 1200);
+    }
+
+    function finishStage1(){
+      gameOver = true;
+      flashColor('rgba(92,255,138,0.15)');
+      playTone(660,0.15,'sine'); setTimeout(()=>playTone(990,0.2,'sine'),150);
+      
+      setTimeout(() => {
+        switchView('view-game9');
+        Game9.goToStartScreen();
+      }, 1000);
+    }
+
+    function failRound(reason){
+      if(gameOver) return;
+      iterLocked = true; roundRunning = false; gameOver = true;
+      stopTimer(); cancelAnimationFrame(rafId); lockSliders();
+      if(matchBar) matchBar.classList.add('wm-fail');
+      playTone(140,0.35,'sawtooth');
+      flashColor('rgba(255,77,77,0.35)');
+      
+      if(overlayHint) overlayHint.style.display = 'none'; 
+      if(overlayCountdown) overlayCountdown.style.display = 'none';
+      if(restartBtn) restartBtn.style.display = 'inline-block';
+      
+      if(overlayTitle) { overlayTitle.textContent = 'PORAŻKA'; overlayTitle.className = 'lose'; }
+      if(overlaySub) overlaySub.textContent = (reason ? reason + '  ' : '') + 'Wynik: ' + score;
+      if(overlay) overlay.classList.add('show');
+    }
+
+    function showSpacePrompt(){
+      if(overlayTitle) { overlayTitle.textContent = 'ETAP 1: WAVE MATCH'; overlayTitle.className = ''; }
+      if(overlaySub) overlaySub.textContent = 'Zmieniaj suwaki, aby w pełni pokryć wzorzec fali.';
+      if(overlayHint) { overlayHint.textContent = 'Naciśnij SPACJĘ, aby rozpocząć'; overlayHint.style.display = 'block'; }
+      if(overlayCountdown) overlayCountdown.style.display = 'none';
+      if(restartBtn) restartBtn.style.display = 'none'; 
+      if(overlay) overlay.classList.add('show'); 
+      waitingForSpace = true;
+    }
+
+    function startCountdownThenBegin(){
+      waitingForSpace = false;
+      if(overlayHint) overlayHint.style.display = 'none';
+      if(overlayCountdown) {
+        overlayCountdown.style.display = 'block';
+        overlayCountdown.textContent = '1';
+      }
+      countdownTimeout = setTimeout(() => {
+        countdownTimeout = null;
+        if(overlay) overlay.classList.remove('show');
+        currentRound = 1; score = 0;
+        gameOver = false; iterLocked = false;
+        startRound();
+      }, 1000);
+    }
+
+    function goToStartScreen(){
+      clearTimeout(timerTimeout); clearTimeout(pendingSetup); clearTimeout(countdownTimeout); clearTimeout(winTransTimeout);
+      pendingSetup = null; countdownTimeout = null; winTransTimeout = null;
+      cancelAnimationFrame(rafId);
+      roundRunning = false; gameOver = false; iterLocked = false;
+      if(matchBar) { matchBar.classList.remove('wm-win','wm-fail'); matchBar.style.width = '0%'; }
+      if(matchPctEl) matchPctEl.textContent = '0%';
+      if(timerBarEl) { timerBarEl.style.transition = 'none'; timerBarEl.style.width = '100%'; }
+      if(targetGen){ targetGen.destroy(); targetGen = null; }
+      if(userGen)  { userGen.destroy();   userGen   = null; }
+      lockSliders(); showSpacePrompt();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if(currentView !== 'view-game3') return;
+      if(waitingForSpace && (e.code==='Space'||e.key===' ')){ e.preventDefault(); startCountdownThenBegin(); return; }
+    });
+
+    if(restartBtn) restartBtn.addEventListener('click', () => {
+      switchView('view-menu');
+    });
+
+    setupSliders(); lockSliders();
+    return { goToStartScreen };
+  })();
+
+
+  // ==========================================
+  // GRA 9: UNTANGLE (ETAP 2)
+  // ==========================================
+  const CONFIG_GAME9 = {
+    ROUNDS: 3,
+    NUM_NODES: 14,
+    DURATION_SEC: 30,
+  };
+
+  const Game9 = (function(){
+    const overlay = document.getElementById('overlay9');
+    const overlayTitle = document.getElementById('overlayTitle9');
+    const overlaySub = document.getElementById('overlaySub9');
+    const overlayHint = document.getElementById('overlayHint9');
+    const overlayCountdown = document.getElementById('overlayCountdown9');
+    const restartBtn = document.getElementById('restartBtn9');
+    const wrapEl = document.getElementById('g9-canvas-wrap');
+    const canvasEl = document.getElementById('g9-canvas');
+    const timerBar = document.getElementById('g9-timer-bar');
+    const progressVal = document.getElementById('g9-progress-val');
+    const progressTotal = document.getElementById('g9-progress-total');
+    const ctx = canvasEl.getContext('2d');
+
+    let TOTAL_ROUNDS = CONFIG_GAME9.ROUNDS;
+    let NUM_NODES = CONFIG_GAME9.NUM_NODES;
+    let DURATION_MS = CONFIG_GAME9.DURATION_SEC * 1000;
+
+    const NODE_R = 15; 
+    const TEXT_STAGE_FIRST = 'URUCHAMIANIE ZABEZPIECZEŃ';
+    const TEXT_STAGE_NEXT = 'ZACZYNANIE NOWEGO ETAPU';
+    const stageNoticeEl = document.getElementById('g9-stage-notice');
+
+    let nodes = []; 
+    let nodeEls = []; 
+    let round = 0;
+    let dragIndex = -1;
+    let rafId = null;
+    let roundRunning = false;
+    let gameOver = false;
+    let waitingForSpace = true;
+    let waitingForRestart = false;
+    let timerStart = 0;
+    let pendingTimeouts = [];
+
+    function clearPendingTimeouts(){
+      pendingTimeouts.forEach(id => clearTimeout(id));
+      pendingTimeouts = [];
+    }
+
+    function showStageNotice(text, duration, cb){
+      stageNoticeEl.textContent = text;
+      stageNoticeEl.classList.add('show');
+      return setTimeout(()=>{
+        stageNoticeEl.classList.remove('show');
+        if(cb) cb();
+      }, duration);
+    }
+
+    function resizeCanvas(){
+      const rect = wrapEl.getBoundingClientRect();
+      canvasEl.width = rect.width;
+      canvasEl.height = rect.height;
+    }
+
+    function randRange(min, max){ return min + Math.random() * (max - min); }
+
+    function generateNodes(count){
+      const rect = wrapEl.getBoundingClientRect();
+      const w = rect.width, h = rect.height;
+      const margin = NODE_R + 15;
+      const pts = [];
+      for(let i=0; i<count; i++){
+        pts.push({ x: randRange(margin, Math.max(margin, w - margin)), y: randRange(margin, Math.max(margin, h - margin)) });
+      }
+      return pts;
+    }
+
+    function buildNodeEls(){
+      nodeEls.forEach(el => el.remove());
+      nodeEls = [];
+      nodes.forEach((n, i) => {
+        const el = document.createElement('div');
+        el.className = 'g9-node';
+        el.style.left = n.x + 'px';
+        el.style.top = n.y + 'px';
+        el.addEventListener('mousedown', (e) => {
+          if(gameOver || !roundRunning) return;
+          e.preventDefault();
+          dragIndex = i;
+        });
+        wrapEl.appendChild(el);
+        nodeEls.push(el);
+      });
+    }
+
+    function updateNodeEl(i){
+      const el = nodeEls[i];
+      if(!el) return;
+      el.style.left = nodes[i].x + 'px';
+      el.style.top = nodes[i].y + 'px';
+    }
+
+    function segIntersect(p1,p2,p3,p4){
+      const dx1 = p2.x - p1.x, dy1 = p2.y - p1.y;
+      const dx2 = p4.x - p3.x, dy2 = p4.y - p3.y;
+      const denom = dy2*dx1 - dx2*dy1;
+      if(denom === 0) return false;
+      const dx3 = p1.x - p3.x, dy3 = p1.y - p3.y;
+      const t = (dx2*dy3 - dy2*dx3) / denom;
+      const u = (dx1*dy3 - dy1*dx3) / denom;
+      return t > 0 && t < 1 && u > 0 && u < 1;
+    }
+
+    function countIntersections(){
+      const n = nodes.length;
+      let count = 0;
+      for(let i=0; i<n; i++){
+        const a1 = nodes[i], a2 = nodes[(i+1)%n];
+        for(let j=i+1; j<n; j++){
+          if(Math.abs(i-j) <= 1) continue;
+          if(i===0 && j===n-1) continue; 
+          const b1 = nodes[j], b2 = nodes[(j+1)%n];
+          if(segIntersect(a1,a2,b1,b2)){
+            count++;
           }
         }
-        
-        matchPct = Math.round(totalScore / WAVE_KEYS.length);
-        if(matchBar) matchBar.style.width = matchPct + '%';
-        if(matchPctEl) matchPctEl.textContent = matchPct + '%';
-        
-        if(matchPct >= MATCH_THRESHOLD) {
-          winRound();
-        }
       }
+      return count;
+    }
 
-      function animateLoop(){
-        if(!roundRunning) return;
-        if(targetGen) targetGen.render();
-        if(userGen)   userGen.render();
-        rafId = requestAnimationFrame(animateLoop);
+    function draw(){
+      ctx.clearRect(0,0,canvasEl.width, canvasEl.height);
+      const n = nodes.length;
+      if(n < 2) return 0;
+      const count = countIntersections();
+      
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = count === 0 ? '#5cff8a' : '#1e90ff';
+      ctx.shadowBlur = count === 0 ? 15 : 8;
+      ctx.shadowColor = count === 0 ? '#5cff8a' : '#00bfff';
+
+      for(let i=0; i<n; i++){
+        const a = nodes[i], b = nodes[(i+1)%n];
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
       }
+      ctx.shadowBlur = 0;
+      return count;
+    }
 
-      function startTimer(){
-        if(!timerBarEl) return;
-        timerBarEl.style.transition = 'none';
-        timerBarEl.style.width = '100%';
-        void timerBarEl.getBoundingClientRect();
-        timerBarEl.style.transition = 'width ' + DURATION_MS + 'ms linear';
-        timerBarEl.style.width = '0%';
-        timerTimeout = setTimeout(() => { if(roundRunning) failRound('Czas minął.'); }, DURATION_MS);
+    function updateTimerBar(){
+      const elapsed = Date.now() - timerStart;
+      const pct = Math.max(0, 100 - (elapsed / DURATION_MS) * 100);
+      timerBar.style.width = pct + '%';
+      return elapsed >= DURATION_MS;
+    }
+
+    function loop(){
+      if(gameOver || !roundRunning) return;
+      const count = draw();
+      const timeUp = updateTimerBar();
+      if(count === 0){ winRound(); return; }
+      if(timeUp){ failGame(); return; }
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function onMouseMove(e){
+      if(dragIndex === -1) return;
+      const rect = wrapEl.getBoundingClientRect();
+      let x = e.clientX - rect.left;
+      let y = e.clientY - rect.top;
+      x = Math.min(Math.max(x, NODE_R), Math.max(NODE_R, rect.width - NODE_R));
+      y = Math.min(Math.max(y, NODE_R), Math.max(NODE_R, rect.height - NODE_R));
+      nodes[dragIndex].x = x;
+      nodes[dragIndex].y = y;
+      updateNodeEl(dragIndex);
+    }
+    function onMouseUp(){ dragIndex = -1; }
+
+    function showWinScreen(){
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      overlayTitle.textContent = 'WYGRANA!';
+      overlayTitle.className = 'win';
+      overlaySub.textContent = 'Ukończono wszystkie etapy!';
+      overlay.classList.add('show');
+      waitingForRestart = true;
+    }
+
+    function winRound(){
+      gameOver = true; roundRunning = false;
+      dragIndex = -1;
+      cancelAnimationFrame(rafId);
+      if(round >= TOTAL_ROUNDS){
+        playTone(660,0.15,'sine'); setTimeout(()=>playTone(990,0.2,'sine'),150);
+        showWinScreen();
+      } else {
+        playTone(660,0.15,'sine'); setTimeout(()=>playTone(880,0.12,'sine'),150);
+        flashColor('rgba(255,255,255,0.08)');
+        pendingTimeouts.push(setTimeout(()=>{
+          pendingTimeouts.push(showStageNotice(TEXT_STAGE_NEXT, 1000, nextRound));
+        }, 500));
       }
+    }
 
-      function stopTimer(){
-        clearTimeout(timerTimeout);
-        if(!timerBarEl) return;
-        const w = getComputedStyle(timerBarEl).width;
-        timerBarEl.style.transition = 'none'; 
-        timerBarEl.style.width = w;
+    function failGame(){
+      if(gameOver) return;
+      gameOver = true; roundRunning = false;
+      dragIndex = -1;
+      cancelAnimationFrame(rafId);
+      clearPendingTimeouts();
+      stageNoticeEl.classList.remove('show');
+      playTone(140,0.35,'sawtooth');
+      flashColor('rgba(255,77,77,0.35)');
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'inline-block';
+      overlayTitle.textContent = 'PORAŻKA';
+      overlayTitle.className = 'lose';
+      overlaySub.textContent = 'Czas minął w Etapie 2.';
+      overlay.classList.add('show');
+      waitingForRestart = true;
+    }
+
+    function prepareRound(){
+      cancelAnimationFrame(rafId);
+      clearPendingTimeouts();
+      stageNoticeEl.classList.remove('show');
+      dragIndex = -1;
+      resizeCanvas();
+      nodes = generateNodes(NUM_NODES);
+      buildNodeEls();
+      progressTotal.textContent = TOTAL_ROUNDS;
+      progressVal.textContent = round;
+      timerBar.style.width = '100%';
+      draw();
+    }
+
+    function beginRound(){
+      gameOver = false; roundRunning = true;
+      timerStart = Date.now();
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function nextRound(){
+      round++;
+      prepareRound();
+      beginRound();
+    }
+
+    function showSpacePrompt(){
+      overlayTitle.textContent = 'ETAP 2: UNTANGLE';
+      overlayTitle.className = '';
+      overlaySub.textContent = 'Przeciągaj węzły, aby rozplątać wszystkie przecięcia linii.';
+      overlayHint.textContent = 'Naciśnij SPACJĘ, aby rozpocząć etap.';
+      overlayHint.style.display = 'block';
+      overlayCountdown.style.display = 'none';
+      restartBtn.style.display = 'none';
+      overlay.classList.add('show');
+      waitingForSpace = true;
+    }
+
+    function startCountdownThenBegin(){
+      waitingForSpace = false;
+      overlayHint.style.display = 'none';
+      overlayCountdown.style.display = 'block';
+      overlayCountdown.textContent = '1';
+      pendingTimeouts.push(setTimeout(()=>{
+        overlay.classList.remove('show');
+        pendingTimeouts.push(showStageNotice(TEXT_STAGE_FIRST, 500, ()=>{
+          round = 1;
+          prepareRound();
+          beginRound();
+        }));
+      }, 1000));
+    }
+
+    function goToStartScreen(){
+      waitingForRestart = false;
+      round = 0;
+      prepareRound();
+      showSpacePrompt();
+    }
+
+    restartBtn.addEventListener('click', () => {
+      switchView('view-menu');
+    });
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('resize', ()=>{ if(roundRunning) resizeCanvas(); });
+
+    window.addEventListener('keydown', (e)=>{
+      if(currentView !== 'view-game9') return;
+      if(waitingForSpace && (e.code==='Space' || e.key===' ')){
+        e.preventDefault(); startCountdownThenBegin(); return;
       }
-
-      function generateTargetWave(){
-        const t = {};
-        for(const k of WAVE_KEYS){
-          const mn = MIN_WAVE[k], mx = MAX_WAVE[k], st = STEP_WAVE[k];
-          // Generujemy losową wartość z uwzględnieniem kroku (step)
-          const stepsCount = Math.floor((mx - mn) / st);
-          const randomStep = Math.floor(Math.random() * (stepsCount + 1));
-          t[k] = parseFloat((mn + randomStep * st).toFixed(2));
-        }
-        return t;
+      if(waitingForRestart && (e.code==='Space' || e.key===' ')){
+        e.preventDefault(); 
+        switchView('view-menu');
+        return;
       }
+    });
 
-      function startRound(){
-        iterLocked = false;
-        if(matchBar) {
-          matchBar.classList.remove('wm-win','wm-fail'); 
-          matchBar.style.width = '0%';
-        }
-        if(matchPctEl) matchPctEl.textContent = '0%';
-        if(iterEl) iterEl.textContent = 'RUNDA ' + currentRound + ' / ' + TOTAL_ROUNDS;
-        
-        targetWave = generateTargetWave();
-        userWave   = Object.assign({}, DEFAULT_WAVE);
-        setSliderValues(userWave); 
-        
-        pendingSetup = setTimeout(() => {
-          pendingSetup = null;
-          if(roundRunning || gameOver) return;
-          const cw = canvasWrap.clientWidth || 600, ch = canvasWrap.clientHeight || 200;
-          if(!cw || !ch) return;
-          
-          targetGen = new SineWaveGenerator(canvasTarget, cw, ch,
-            Object.assign({strokeStyle: TARGET_COLOR}, targetWave));
-          userGen   = new SineWaveGenerator(canvasUser,  cw, ch,
-            Object.assign({strokeStyle: USER_COLOR}, DEFAULT_WAVE));
-          
-          roundRunning = true; 
-          animateLoop(); 
-          startTimer();
-        }, 500);
-      }
+    return { goToStartScreen };
+  })();
+</script>
 
-      function winRound(){
-        if(iterLocked) return;
-        iterLocked = true; roundRunning = false;
-        stopTimer(); cancelAnimationFrame(rafId); lockSliders();
-        if(matchBar) matchBar.classList.add('wm-win');
-        
-        score += Math.round(matchPct * 10); 
-        
-        winTransTimeout = setTimeout(() => {
-          winTransTimeout = null;
-          if(gameOver) return;
-          currentRound++;
-          if(currentRound <= TOTAL_ROUNDS){ startRound(); } else { winGame(); }
-        }, 1200);
-      }
-
-      function failRound(reason){
-        if(gameOver) return;
-        iterLocked = true; roundRunning = false; gameOver = true;
-        stopTimer(); cancelAnimationFrame(rafId); lockSliders();
-        if(matchBar) matchBar.classList.add('wm-fail');
-        
-        if(overlayHint) overlayHint.style.display = 'none'; 
-        if(overlayCountdown) overlayCountdown.style.display = 'none';
-        if(restartBtn) restartBtn.style.display = 'inline-block';
-        if(spacePassHint) spacePassHint.style.display = 'inline-block'; 
-        spaceToPass = true;
-        
-        if(overlayTitle) { overlayTitle.textContent = TEXT_LOSE; overlayTitle.className = 'lose'; }
-        if(overlaySub) overlaySub.textContent = (reason ? reason + '  ' : '') + 'Wynik: ' + score;
-        if(overlay) overlay.classList.add('show');
-      }
-
-      function winGame(){
-        gameOver = true;
-        if(overlayHint) overlayHint.style.display = 'none'; 
-        if(overlayCountdown) overlayCountdown.style.display = 'none';
-        if(restartBtn) restartBtn.style.display = 'inline-block';
-        if(spacePassHint) spacePassHint.style.display = 'inline-block'; 
-        spaceToPass = true;
-        
-        if(overlayTitle) { overlayTitle.textContent = TEXT_WIN; overlayTitle.className = 'win'; }
-        if(overlaySub) overlaySub.textContent = 'Wszystkie rundy zaliczone. Wynik: ' + score;
-        if(overlay) overlay.classList.add('show');
-      }
-
-      function showSpacePrompt(){
-        if(overlayTitle) overlayTitle.textContent = ''; 
-        if(overlaySub) overlaySub.textContent = '';
-        if(overlayHint) { overlayHint.textContent = TEXT_HINT; overlayHint.style.display = 'block'; }
-        if(overlayCountdown) overlayCountdown.style.display = 'none';
-        if(restartBtn) restartBtn.style.display = 'none'; 
-        if(spacePassHint) spacePassHint.style.display = 'none';
-        if(overlay) overlay.classList.add('show'); 
-        waitingForSpace = true;
-      }
-
-      function startCountdownThenBegin(){
-        waitingForSpace = false;
-        if(overlayHint) overlayHint.style.display = 'none';
-        if(overlayCountdown) {
-          overlayCountdown.style.display = 'block';
-          overlayCountdown.textContent = '1';
-        }
-        countdownTimeout = setTimeout(() => {
-          countdownTimeout = null;
-          if(overlay) overlay.classList.remove('show');
-          currentRound = 1; score = 0;
-          gameOver = false; spaceToPass = false; iterLocked = false;
-          startRound();
-        }, 1000);
-      }
-
-      function goToStartScreen(){
-        clearTimeout(timerTimeout); clearTimeout(pendingSetup); clearTimeout(countdownTimeout); clearTimeout(winTransTimeout);
-        pendingSetup = null; countdownTimeout = null; winTransTimeout = null;
-        cancelAnimationFrame(rafId);
-        roundRunning = false; gameOver = false; spaceToPass = false; iterLocked = false;
-        if(spacePassHint) spacePassHint.style.display = 'none';
-        if(matchBar) { matchBar.classList.remove('wm-win','wm-fail'); matchBar.style.width = '0%'; }
-        if(matchPctEl) matchPctEl.textContent = '0%';
-        if(timerBarEl) { timerBarEl.style.transition = 'none'; timerBarEl.style.width = '100%'; }
-        if(targetGen){ targetGen.destroy(); targetGen = null; }
-        if(userGen)  { userGen.destroy();   userGen   = null; }
-        lockSliders(); showSpacePrompt();
-      }
-
-      window.addEventListener('keydown', (e) => {
-        if(currentView !== 'view-game3') return;
-        if(waitingForSpace && (e.code==='Space'||e.key===' ')){ e.preventDefault(); startCountdownThenBegin(); return; }
-        if(spacePassHint && spaceToPass && (e.code==='Space'||e.key===' ')){ e.preventDefault(); goToStartScreen(); return; }
-      });
-
-      if(restartBtn) restartBtn.addEventListener('click', goToStartScreen);
-
-      setupSliders(); lockSliders();
-      return { goToStartScreen, isWaitingForSpace: () => waitingForSpace };
-    })();
-  </script>
 </body>
 </html>
