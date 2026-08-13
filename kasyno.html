@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kasyno</title>
+  <title>Kasyno - Solo Hack Simulator</title>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -65,7 +65,7 @@
       justify-content: center;
     }
 
-    /* ---------- NOWY STYL MENU WYBORU ETAPÓW ---------- */
+    /* ---------- MENU WYBORU ETAPÓW ---------- */
     #view-menu {
       z-index: 150;
       background: #0a0c10;
@@ -316,12 +316,12 @@
 </head>
 <body>
 
-<a href="index.html" id="btn-back-main" class="btn-back" style="display:none;">◄ POWRÓT</a>
+<a href="index.html" id="btn-back-main" class="btn-back">◄ POWRÓT</a>
 
-<!-- ============ MENU WYBORU ETAPÓW (NOWY WYGLĄD) ============ -->
+<!-- ============ MENU WYBORU ETAPÓW ============ -->
 <div id="view-menu" class="view active">
   <div class="menu-main-title">KASYNO</div>
-  <div class="menu-main-sub"></div>
+  <div class="menu-main-sub">SOLO HACK SIMULATOR</div>
   
   <div class="menu-list">
     <div class="menu-card">
@@ -422,11 +422,10 @@
 </div>
 
 <script>
-if (sessionStorage.getItem('paleto_auth') !== 'true') {
+  if (sessionStorage.getItem('paleto_auth') !== 'true') {
     alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
     window.location.href = 'index.html';
   }
-
   let audioCtx = null;
   function initAudio(){
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -471,6 +470,7 @@ if (sessionStorage.getItem('paleto_auth') !== 'true') {
     if(viewId === 'view-menu'){
       backBtn.style.display = 'block';
       backBtn.href = 'index.html';
+      backBtn.onclick = null;
     } else {
       backBtn.style.display = 'block';
       backBtn.href = '#';
