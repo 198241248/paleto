@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaveMatch Game</title>
+  <style>
+    :root {
+      --wm-purple: #6b67ef;
+      --wm-purple-glow: rgba(107,103,239,0.55);
+      --green: #5cff8a;
+      --accent2: #ff4d4d;
+      --accent: #4dd8ff;
+    }
+
+    body {
+      margin: 0;
+      background: #0a0c10;
+      color: #fff;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+
+    .view {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    /* ---------- GRA 3: WaveMatch ---------- */
+    #app3 {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8vh 0 3vh;
+      box-sizing: border-box;
+    }
+
+    #wm-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: min(860px, 90vw);
+      gap: 1.6vh;
+      background: #111318;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 18px 22px 22px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    }
+
+    #wm-header {
+      width: 100%;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+    }
+
+    #wm-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #fff;
+      display: flex;
+      align-items: baseline;
+    }
+
+    #wm-title span { color: var(--wm-purple); }
+    #wm-sub { opacity: 0.55; font-size: 12px; letter-spacing: 0.2px; font-weight: 400; }
+    #wm-iter { opacity: 0.55; margin-left: auto; }
+    #wm-match-pct { opacity: 0.85; font-size: 12px; }
+
+    .wm-sl-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      letter-spacing: 1px;
+      opacity: 0.6;
+      margin-bottom: 3px;
+    }
+
+    #wm-canvas-wrap {
+      width: 100%;
+      height: 32vh;
+      position: relative;
+      overflow: hidden;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+    }
+
+    #wm-canvas-target, #wm-canvas-user {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #wm-match-wrap {
+      width: 100%;
+      height: 11px;
+      position: relative;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    #wm-match-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #514cd8, var(--wm-purple));
+      transition: width 0.12s linear, background 0.25s;
+      box-shadow: 0 0 12px var(--wm-purple-glow);
+    }
+
+    #wm-match-bar.wm-win { background: var(--green); box-shadow: 0 0 12px rgba(92,255,138,0.55); }
+    #wm-match-bar.wm-fail { background: var(--accent2); box-shadow: 0 0 12px rgba(255,77,77,0.55); }
+
+    #wm-timer-wrap {
+      width: 100%;
+      height: 9px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    #wm-timer-bar {
+      height: 100%;
+      width: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #514cd8, var(--wm-purple));
+      box-shadow: 0 0 12px var(--wm-purple-glow);
+    }
+
+    #wm-sliders {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.1vh 1.6vh;
+      margin-top: 0.3vh;
+    }
+
+    .wm-sg { display: flex; flex-direction: column; }
+
+    .wm-range {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 10px;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+      background: linear-gradient(to right, var(--wm-purple) var(--sl-fill, 50%), rgba(255,255,255,0.08) var(--sl-fill, 50%));
+      transition: background 0.05s linear;
+    }
+
+    .wm-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 24px;
+      background: #f1f1f8;
+      border-radius: 3px;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      transition: transform 0.08s;
+    }
+
+    .wm-range::-webkit-slider-thumb:hover { transform: scaleY(1.08); }
+    .wm-range::-moz-range-thumb {
+      width: 14px;
+      height: 24px;
+      background: #f1f1f8;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    .wm-range:disabled { opacity: 0.28; cursor: default; }
+    .wm-range:disabled::-webkit-slider-thumb { cursor: default; }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 12, 16, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .overlay h1 { font-size: 36px; margin: 0 0 10px; }
+    .overlay h1.win { color: var(--green); }
+    .overlay h1.lose { color: var(--accent2); }
+    .overlay p { font-size: 16px; opacity: 0.7; margin: 0 0 20px; }
+    .overlay .hint { font-size: 18px; color: var(--accent); margin-bottom: 15px; }
+    .overlay .countdown { font-size: 48px; font-weight: bold; color: var(--wm-purple); }
+
+    .overlay button {
+      background: var(--wm-purple);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 0 15px var(--wm-purple-glow);
+      transition: transform 0.1s;
+    }
+
+    .overlay button:hover { transform: scale(1.05); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ WIDOK: GRA 3 (wave match) ============ -->
+  <div id="view-game3" class="view active">
+    <div id="app3">
+      <div id="wm-wrap" class="wm-a11y">
+        <div id="wm-header">
+          <div id="wm-title">WAVE<span>MATCH</span></div>
+          <div id="wm-sub">Zmieniaj parametry, aby dopasować falę.</div>
+          <div id="wm-iter"></div>
+          <div id="wm-match-pct">0%</div>
+        </div>
+        <div id="wm-canvas-wrap">
+          <canvas id="wm-canvas-target"></canvas>
+          <canvas id="wm-canvas-user"></canvas>
+        </div>
+        <div id="wm-match-wrap"><div id="wm-match-bar"></div></div>
+        <div id="wm-timer-wrap"><div id="wm-timer-bar"></div></div>
+        <div id="wm-sliders">
+          <div class="wm-sg">
+            <div class="wm-sl-label"><span>SPEED</span><span id="wm-speed-val">1.00</span></div>
+            <input type="range" id="wm-speed" class="wm-range">
+          </div>
+          <div class="wm-sg">
+            <div class="wm-sl-label"><span>AMPLITUDE</span><span id="wm-amplitude-val">1.00</span></div>
+            <input type="range" id="wm-amplitude" class="wm-range">
+          </div>
+          <div class="wm-sg">
+            <div class="wm-sl-label"><span>WAVELENGTH</span><span id="wm-wavelength-val">1.00</span></div>
+            <input type="range" id="wm-wavelength" class="wm-range">
+          </div>
+          <div class="wm-sg">
+            <div class="wm-sl-label"><span>SMOOTHNESS</span><span id="wm-segmentLength-val">1.00</span></div>
+            <input type="range" id="wm-segmentLength" class="wm-range">
+          </div>
+          <div class="wm-sg">
+            <div class="wm-sl-label"><span>WIDTH</span><span id="wm-lineWidth-val">10.00</span></div>
+            <input type="range" id="wm-lineWidth" class="wm-range">
+          </div>
+          <div class="wm-sg">
+            <div class="wm-sl-label"><span>PHASE</span><span id="wm-timeModifier-val">1.00</span></div>
+            <input type="range" id="wm-timeModifier" class="wm-range">
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="overlay3" class="overlay show">
+      <h1 id="overlayTitle3"></h1>
+      <p id="overlaySub3"></p>
+      <div id="overlayHint3" class="hint">Naciśnij SPACJĘ, aby rozpocząć</div>
+      <div id="overlayCountdown3" class="countdown" style="display:none;"></div>
+      <button id="restartBtn3" style="display:none;">SPRÓBUJ PONOWNIE</button>
+      <div id="spacePassHint3" style="display:none; font-size:14px; letter-spacing:2px; color:var(--accent); padding:10px 22px; border:1px solid rgba(77,216,255,0.45); border-radius:6px; animation:pulse 1.1s ease-in-out infinite; margin-top: 15px;">[ SPACJA ] → nowa próba</div>
+    </div>
+  </div>
+
+  <script>
+    if (sessionStorage.getItem('paleto_auth') !== 'true') {
+    alert("Dostęp zablokowany! Zaloguj się w menu głównym.");
+    window.location.href = 'index.html';
+  }
+    const CONFIG_GAME3 = {
+      ROUNDS: 3,
+      DURATION_MS: 15000,
+      MATCH_THRESHOLD: 98, // Wymagane niemal 100% dokładności
+      TARGET_WAVE_COLOR: '#6b67ef',
+      USER_WAVE_COLOR: '#ffffff'
+    };
+
+    let currentView = 'view-game3';
+    let TEXT_LOSE = 'PORAŻKA';
+    let TEXT_WIN = 'WYGRANA!';
+    let TEXT_HINT = 'Naciśnij SPACJĘ, aby rozpocząć';
+
+    const Game3 = (function(){
+      const overlay            = document.getElementById('overlay3');
+      const overlayTitle       = document.getElementById('overlayTitle3');
+      const overlaySub         = document.getElementById('overlaySub3');
+      const overlayHint        = document.getElementById('overlayHint3');
+      const overlayCountdown   = document.getElementById('overlayCountdown3');
+      const restartBtn         = document.getElementById('restartBtn3');
+      const spacePassHint      = document.getElementById('spacePassHint3');
+      const canvasWrap         = document.getElementById('wm-canvas-wrap');
+      const canvasTarget       = document.getElementById('wm-canvas-target');
+      const canvasUser         = document.getElementById('wm-canvas-user');
+      const matchBar           = document.getElementById('wm-match-bar');
+      const matchPctEl         = document.getElementById('wm-match-pct');
+      const timerBarEl         = document.getElementById('wm-timer-bar');
+      const iterEl             = document.getElementById('wm-iter');
+
+      let TARGET_COLOR = CONFIG_GAME3.TARGET_WAVE_COLOR;
+      let USER_COLOR   = CONFIG_GAME3.USER_WAVE_COLOR;
+
+      const WAVE_KEYS  = ['speed','amplitude','wavelength','segmentLength','lineWidth','timeModifier'];
+      const MIN_WAVE   = {speed:.1,  amplitude:0,   wavelength:0.5,  segmentLength:.1, lineWidth:10, timeModifier:.1};
+      const MAX_WAVE   = {speed:5,   amplitude:100, wavelength:10,   segmentLength:10, lineWidth:30, timeModifier:1};
+      const STEP_WAVE  = {speed:.1,  amplitude:.1,  wavelength:.1,   segmentLength:.1, lineWidth:.1, timeModifier:.01};
+      const DEFAULT_WAVE = {speed:1, amplitude:1,   wavelength:1,    segmentLength:1,  lineWidth:10, timeModifier:1};
+
+      let TOTAL_ROUNDS = CONFIG_GAME3.ROUNDS;
+      let DURATION_MS  = CONFIG_GAME3.DURATION_MS;
+      const MATCH_THRESHOLD = CONFIG_GAME3.MATCH_THRESHOLD;
+
+      const SLIDERS = {};
+      WAVE_KEYS.forEach(k => { SLIDERS[k] = document.getElementById('wm-' + k); });
+
+      function updateSliderFill(el){
+        if(!el) return;
+        const mn = parseFloat(el.min||0), mx = parseFloat(el.max||100), v = parseFloat(el.value||0);
+        const pct = mx > mn ? ((v - mn) / (mx - mn) * 100).toFixed(1) + '%' : '0%';
+        el.style.setProperty('--sl-fill', pct);
+      }
+      function updateAllFills(){ WAVE_KEYS.forEach(k => updateSliderFill(SLIDERS[k])); }
+
+      class SineWaveGenerator {
+        constructor(canvas, w, h, opts){
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width  = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+          canvas.style.width  = w + 'px';
+          canvas.style.height = h + 'px';
+          this.ctx = canvas.getContext('2d');
+          this.ctx.scale(dpr, dpr);
+          this.w = w; this.h = h;
+          this.waveLeft  = w * 0.025;
+          this.waveWidth = w * 0.95;
+          this.time = 0;
+          this.wave = Object.assign(
+            {speed:10,amplitude:50,wavelength:50,segmentLength:10,lineWidth:2,strokeStyle:'white',timeModifier:1},
+            opts
+          );
+        }
+        update(o){ Object.assign(this.wave, o); }
+        ease(x, amp){ return amp * (Math.sin(x * Math.PI * 2 - Math.PI / 2) + 1) * 0.5; }
+        draw(time){
+          const {speed,amplitude,wavelength,lineWidth,strokeStyle,segmentLength} = this.wave;
+          const seg = Math.max(segmentLength, 0.1);
+          const wl  = wavelength || 0.001;
+          const c   = this.h / 2;
+          const thickness = Math.max(lineWidth, 8);
+
+          const path = new Path2D();
+          path.moveTo(0, c);
+          path.lineTo(this.waveLeft, c);
+          for(let d = 0; d < this.waveWidth; d += seg){
+            const o  = time * speed + (-c + d) / wl;
+            const u  = Math.sin(o);
+            const f  = this.ease(d / this.waveWidth, amplitude * 1.5);
+            path.lineTo(d + this.waveLeft, f * u + c);
+          }
+          path.lineTo(this.w, c);
+
+          this.ctx.save();
+          this.ctx.lineJoin = 'round';
+          this.ctx.lineCap  = 'round';
+
+          this.ctx.shadowColor = strokeStyle;
+          this.ctx.shadowBlur  = Math.min(thickness * 0.9, 18);
+          this.ctx.globalAlpha = 0.55;
+          this.ctx.lineWidth   = thickness * 1.35;
+          this.ctx.strokeStyle = strokeStyle;
+          this.ctx.stroke(path);
+
+          this.ctx.shadowBlur  = Math.min(thickness * 0.5, 10);
+          this.ctx.globalAlpha = 1;
+          this.ctx.lineWidth   = thickness;
+          this.ctx.stroke(path);
+
+          this.ctx.restore();
+        }
+        clear(){ this.ctx.clearRect(0, 0, this.w, this.h); }
+        render(){ this.clear(); this.time -= 0.1; this.draw(this.time * this.wave.timeModifier); }
+        destroy(){ this.ctx.clearRect(0, 0, this.w, this.h); }
+      }
+
+      let waitingForSpace = true, roundRunning = false, spaceToPass = false;
+      let gameOver = false, iterLocked = false, currentRound = 1, score = 0, matchPct = 0;
+      let targetWave = null, userWave = null, targetGen = null, userGen = null;
+      let rafId = null, timerTimeout = null, pendingSetup = null;
+      let countdownTimeout = null, winTransTimeout = null;
+
+      function setupSliders(){
+        WAVE_KEYS.forEach(k => {
+          const sl = SLIDERS[k];
+          if(!sl) return;
+          sl.min = MIN_WAVE[k]; sl.max = MAX_WAVE[k]; sl.step = STEP_WAVE[k];
+          sl.addEventListener('input', () => {
+            if(!roundRunning || iterLocked) return;
+            userWave[k] = parseFloat(sl.value);
+            const v = document.getElementById('wm-' + k + '-val');
+            if(v) v.textContent = parseFloat(sl.value).toFixed(2);
+            updateSliderFill(sl);
+            if(userGen) userGen.update({[k]: userWave[k]});
+            checkMatch();
+          });
+        });
+      }
+
+      function setSliderValues(wave){
+        WAVE_KEYS.forEach(k => {
+          if(!SLIDERS[k]) return;
+          SLIDERS[k].value = wave[k]; 
+          SLIDERS[k].disabled = false;
+          const v = document.getElementById('wm-' + k + '-val');
+          if(v) v.textContent = parseFloat(wave[k]).toFixed(2);
+        });
+        updateAllFills();
+      }
+
+      function lockSliders(){ 
+        WAVE_KEYS.forEach(k => { if(SLIDERS[k]) SLIDERS[k].disabled = true; }); 
+        updateAllFills(); 
+      }
+
+      function checkMatch(){
+        if(!userWave || !targetWave || iterLocked) return;
+        let totalScore = 0;
+        
+        for(const k of WAVE_KEYS){
+          const u = userWave[k];
+          const t = targetWave[k];
+          const mn = MIN_WAVE[k];
+          const mx = MAX_WAVE[k];
+          const range = mx - mn;
+          
+          if(range > 0){
+            // Bezpośrednia różnica bezwzględna między wartością użytkownika a celem
+            const diff = Math.abs(u - t);
+            // Wyliczamy dokładność procentową dla tego parametru (100% = idealnie to samo)
+            const paramAccuracy = Math.max(0, 100 * (1 - (diff / range)));
+            totalScore += paramAccuracy;
+          } else {
+            totalScore += 100;
+          }
+        }
+        
+        matchPct = Math.round(totalScore / WAVE_KEYS.length);
+        if(matchBar) matchBar.style.width = matchPct + '%';
+        if(matchPctEl) matchPctEl.textContent = matchPct + '%';
+        
+        if(matchPct >= MATCH_THRESHOLD) {
+          winRound();
+        }
+      }
+
+      function animateLoop(){
+        if(!roundRunning) return;
+        if(targetGen) targetGen.render();
+        if(userGen)   userGen.render();
+        rafId = requestAnimationFrame(animateLoop);
+      }
+
+      function startTimer(){
+        if(!timerBarEl) return;
+        timerBarEl.style.transition = 'none';
+        timerBarEl.style.width = '100%';
+        void timerBarEl.getBoundingClientRect();
+        timerBarEl.style.transition = 'width ' + DURATION_MS + 'ms linear';
+        timerBarEl.style.width = '0%';
+        timerTimeout = setTimeout(() => { if(roundRunning) failRound('Czas minął.'); }, DURATION_MS);
+      }
+
+      function stopTimer(){
+        clearTimeout(timerTimeout);
+        if(!timerBarEl) return;
+        const w = getComputedStyle(timerBarEl).width;
+        timerBarEl.style.transition = 'none'; 
+        timerBarEl.style.width = w;
+      }
+
+      function generateTargetWave(){
+        const t = {};
+        for(const k of WAVE_KEYS){
+          const mn = MIN_WAVE[k], mx = MAX_WAVE[k], st = STEP_WAVE[k];
+          // Generujemy losową wartość z uwzględnieniem kroku (step)
+          const stepsCount = Math.floor((mx - mn) / st);
+          const randomStep = Math.floor(Math.random() * (stepsCount + 1));
+          t[k] = parseFloat((mn + randomStep * st).toFixed(2));
+        }
+        return t;
+      }
+
+      function startRound(){
+        iterLocked = false;
+        if(matchBar) {
+          matchBar.classList.remove('wm-win','wm-fail'); 
+          matchBar.style.width = '0%';
+        }
+        if(matchPctEl) matchPctEl.textContent = '0%';
+        if(iterEl) iterEl.textContent = 'RUNDA ' + currentRound + ' / ' + TOTAL_ROUNDS;
+        
+        targetWave = generateTargetWave();
+        userWave   = Object.assign({}, DEFAULT_WAVE);
+        setSliderValues(userWave); 
+        
+        pendingSetup = setTimeout(() => {
+          pendingSetup = null;
+          if(roundRunning || gameOver) return;
+          const cw = canvasWrap.clientWidth || 600, ch = canvasWrap.clientHeight || 200;
+          if(!cw || !ch) return;
+          
+          targetGen = new SineWaveGenerator(canvasTarget, cw, ch,
+            Object.assign({strokeStyle: TARGET_COLOR}, targetWave));
+          userGen   = new SineWaveGenerator(canvasUser,  cw, ch,
+            Object.assign({strokeStyle: USER_COLOR}, DEFAULT_WAVE));
+          
+          roundRunning = true; 
+          animateLoop(); 
+          startTimer();
+        }, 500);
+      }
+
+      function winRound(){
+        if(iterLocked) return;
+        iterLocked = true; roundRunning = false;
+        stopTimer(); cancelAnimationFrame(rafId); lockSliders();
+        if(matchBar) matchBar.classList.add('wm-win');
+        
+        score += Math.round(matchPct * 10); 
+        
+        winTransTimeout = setTimeout(() => {
+          winTransTimeout = null;
+          if(gameOver) return;
+          currentRound++;
+          if(currentRound <= TOTAL_ROUNDS){ startRound(); } else { winGame(); }
+        }, 1200);
+      }
+
+      function failRound(reason){
+        if(gameOver) return;
+        iterLocked = true; roundRunning = false; gameOver = true;
+        stopTimer(); cancelAnimationFrame(rafId); lockSliders();
+        if(matchBar) matchBar.classList.add('wm-fail');
+        
+        if(overlayHint) overlayHint.style.display = 'none'; 
+        if(overlayCountdown) overlayCountdown.style.display = 'none';
+        if(restartBtn) restartBtn.style.display = 'inline-block';
+        if(spacePassHint) spacePassHint.style.display = 'inline-block'; 
+        spaceToPass = true;
+        
+        if(overlayTitle) { overlayTitle.textContent = TEXT_LOSE; overlayTitle.className = 'lose'; }
+        if(overlaySub) overlaySub.textContent = (reason ? reason + '  ' : '') + 'Wynik: ' + score;
+        if(overlay) overlay.classList.add('show');
+      }
+
+      function winGame(){
+        gameOver = true;
+        if(overlayHint) overlayHint.style.display = 'none'; 
+        if(overlayCountdown) overlayCountdown.style.display = 'none';
+        if(restartBtn) restartBtn.style.display = 'inline-block';
+        if(spacePassHint) spacePassHint.style.display = 'inline-block'; 
+        spaceToPass = true;
+        
+        if(overlayTitle) { overlayTitle.textContent = TEXT_WIN; overlayTitle.className = 'win'; }
+        if(overlaySub) overlaySub.textContent = 'Wszystkie rundy zaliczone. Wynik: ' + score;
+        if(overlay) overlay.classList.add('show');
+      }
+
+      function showSpacePrompt(){
+        if(overlayTitle) overlayTitle.textContent = ''; 
+        if(overlaySub) overlaySub.textContent = '';
+        if(overlayHint) { overlayHint.textContent = TEXT_HINT; overlayHint.style.display = 'block'; }
+        if(overlayCountdown) overlayCountdown.style.display = 'none';
+        if(restartBtn) restartBtn.style.display = 'none'; 
+        if(spacePassHint) spacePassHint.style.display = 'none';
+        if(overlay) overlay.classList.add('show'); 
+        waitingForSpace = true;
+      }
+
+      function startCountdownThenBegin(){
+        waitingForSpace = false;
+        if(overlayHint) overlayHint.style.display = 'none';
+        if(overlayCountdown) {
+          overlayCountdown.style.display = 'block';
+          overlayCountdown.textContent = '1';
+        }
+        countdownTimeout = setTimeout(() => {
+          countdownTimeout = null;
+          if(overlay) overlay.classList.remove('show');
+          currentRound = 1; score = 0;
+          gameOver = false; spaceToPass = false; iterLocked = false;
+          startRound();
+        }, 1000);
+      }
+
+      function goToStartScreen(){
+        clearTimeout(timerTimeout); clearTimeout(pendingSetup); clearTimeout(countdownTimeout); clearTimeout(winTransTimeout);
+        pendingSetup = null; countdownTimeout = null; winTransTimeout = null;
+        cancelAnimationFrame(rafId);
+        roundRunning = false; gameOver = false; spaceToPass = false; iterLocked = false;
+        if(spacePassHint) spacePassHint.style.display = 'none';
+        if(matchBar) { matchBar.classList.remove('wm-win','wm-fail'); matchBar.style.width = '0%'; }
+        if(matchPctEl) matchPctEl.textContent = '0%';
+        if(timerBarEl) { timerBarEl.style.transition = 'none'; timerBarEl.style.width = '100%'; }
+        if(targetGen){ targetGen.destroy(); targetGen = null; }
+        if(userGen)  { userGen.destroy();   userGen   = null; }
+        lockSliders(); showSpacePrompt();
+      }
+
+      window.addEventListener('keydown', (e) => {
+        if(currentView !== 'view-game3') return;
+        if(waitingForSpace && (e.code==='Space'||e.key===' ')){ e.preventDefault(); startCountdownThenBegin(); return; }
+        if(spacePassHint && spaceToPass && (e.code==='Space'||e.key===' ')){ e.preventDefault(); goToStartScreen(); return; }
+      });
+
+      if(restartBtn) restartBtn.addEventListener('click', goToStartScreen);
+
+      setupSliders(); lockSliders();
+      return { goToStartScreen, isWaitingForSpace: () => waitingForSpace };
+    })();
+  </script>
+</body>
+</html>

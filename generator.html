@@ -17,6 +17,9 @@
     .gen-title { font-family: 'Teko', sans-serif; font-size: 36px; color: #4dd8ff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
     .gen-subtitle { font-size: 12px; color: #7d8590; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px; }
     
+    .gen-select { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #1f2937; color: #fff; border-radius: 6px; font-size: 16px; margin-bottom: 15px; text-align: center; outline: none; }
+    .gen-select:focus { border-color: #4dd8ff; }
+
     .gen-btn { width: 100%; padding: 14px; background: #4dd8ff; border: none; color: #0b0f14; font-family: 'Teko', sans-serif; font-size: 24px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
     .gen-btn:hover { background: #3ab1cc; }
     
@@ -30,6 +33,15 @@
     <div class="gen-title">GENERATOR LICENCJI</div>
     <div class="gen-subtitle">Panel Administratora</div>
     
+    <div style="text-align: left; font-size: 13px; color: #8b949e; margin-bottom: 5px;">Wybierz czas ważności klucza:</div>
+    <select id="durationSelect" class="gen-select">
+      <option value="1h">1 godzina</option>
+      <option value="24h">24 godziny (1 dzień)</option>
+      <option value="7d">7 dni</option>
+      <option value="30d">30 dni</option>
+      <option value="lifetime">Lifetime (Dożywotnio)</option>
+    </select>
+
     <button class="gen-btn" onclick="generateKey()">WYGENERUJ KLUCZ</button>
 
     <a href="index.html" class="btn-back">◄ Powrót do menu głównego</a>
@@ -40,16 +52,18 @@
     let adminPassInput = prompt("Podaj hasło administratora:");
     if (!adminPassInput) return;
 
+    const duration = document.getElementById('durationSelect').value;
+
     try {
       const response = await fetch('/api/license', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate', adminPass: adminPassInput })
+        body: JSON.stringify({ action: 'generate', adminPass: adminPassInput, duration: duration })
       });
       const data = await response.json();
 
       if (data.success) {
-        alert("Klucz został pomyślnie wygenerowany i wysłany na Discorda!");
+        alert("Klucz został pomyślnie wygenerowany i wysłany na Discorda! Klucz: " + data.key);
       } else {
         alert(data.message || "Błędne hasło!");
       }

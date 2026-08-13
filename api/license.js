@@ -15,85 +15,235 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, key, adminPass } = req.body;
-  
+  const { action, key, adminPass, duration, nick } = req.body;
+  const loginTime = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
+
+  // Generowanie stabilnego identyfikatora urządzenia na podstawie nagłówków żądania
   const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown_ip';
   const userAgent = req.headers['user-agent'] || 'unknown_agent';
   const deviceId = `${clientIP}_${Buffer.from(userAgent).toString('base64').substring(0, 15)}`;
 
-  const WEBHOOK_SUCCESS = "https://discord.com/api/webhooks/1534882495869358120/0eFxGWjV8QjA7StGFXE7xWSI9_gn6DD_KmNWwZOCpj_mF5Q1UvnapZS3xMJpgPwIT9Se";
-  const WEBHOOK_FAILED = "https://discord.com/api/webhooks/1534552787642486794/egrFJKtPXBSiJmakC7Y632A8JlGWs_ELLLXVdxUHO7PSXBRCdGK2DRaZGroOafBzLJvH";
-  const loginTime = new Date().toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw' });
+  const WEBHOOK_LOGS = "https://discord.com/api/webhooks/1534882494602678464/Ku1s9nyNtcpxsnYi38fHCC_-Rx6m-B4N4apHUveS-_aLPleZbm54yt-7dRA86vBZn52-";
 
-  // Inicjalizacja domyślnych kluczy w bazie, jeśli jeszcze ich nie ma
-  const defaultKeys = ["PALETO2026", "VIP-ACCESS"];
-  for (const defKey of defaultKeys) {
-    const exists = await kv.exists(`key:${defKey}`);
-    if (!exists) {
-      await kv.hset(`key:${defKey}`, { boundDevice: null });
-    }
+  // Sprawdzanie hasła administratora dla akcji zarządzanych przez bota/panel
+  const adminActions = ['generate', 'delete', 'extend', 'reset', 'info'];
+  if (adminActions.includes(action) && adminPass !== "lxowqxeqxwekopxqwkoq") {
+    return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
   }
 
   // 1. GENEROWANIE KLUCZA
   if (action === 'generate') {
-    if (adminPass !== "lxowqxeqxwekopxqwkoq") { 
-      return res.status(401).json({ success: false, message: "Błędne hasło administratora!" });
-    }
-
     const randomPart1 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const randomPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
     const newKey = `KEY-${randomPart1}-${randomPart2}`;
     
-    // Zapisujemy nowy klucz w bazie KV (pusty boundDevice oznacza, że jeszcze nikt go nie użył)
-    await kv.hset(`key:${newKey}`, { boundDevice: null });
+    // Obliczanie daty wygaśnięcia
+    let expiresAt = null;
+    const now = Date.now();
+    if (duration === '1h') expiresAt = now + 60 * 60 * 1000;
+    else if (duration === '24h') expiresAt = now + 24 * 60 * 60 * 1000;
+    else if (duration === '7d') expiresAt = now + 7 * 24 * 60 * 60 * 1000;
+    else if (duration === '30d') expiresAt = now + 30 * 24 * 60 * 60 * 1000;
+    else expiresAt = 'lifetime'; // Dożywotnio
+
+    await kv.hset(`key:${newKey}`, { 
+      boundDevice: null, 
+      nick: null, 
+      expiresAt: expiresAt,
+      durationLabel: duration || 'lifetime'
+    });
 
     try {
-      await fetch(WEBHOOK_SUCCESS, {
+      await fetch(WEBHOOK_LOGS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `🔑 **Wygenerowano nowy klucz o ${loginTime}**\n> Klucz: \`${newKey}\`` })
+        body: JSON.stringify({ 
+          content: `🔑 **Wygenerowano nowy klucz o ${loginTime}**\n> Klucz: \`${newKey}\`\n> Ważność: \`${duration || 'lifetime'}\`` 
+        })
       });
     } catch(e) {}
 
-    return res.status(200).json({ success: true, message: "Klucz został wygenerowany i wysłany na Discorda!" });
+    return res.status(200).json({ success: true, message: "Klucz został wygenerowany!", key: newKey });
   }
 
-  // 2. WERYFIKACJA I PRZYPISANIE DO URZĄDZENIA
+  // 2. WERYFIKACJA KLUCZA
   if (action === 'verify') {
-    // Sprawdzamy czy klucz istnieje w bazie KV
+    if (!key) {
+      return res.status(400).json({ success: false, message: "Wprowadź klucz!" });
+    }
+
     const keyData = await kv.hgetall(`key:${key}`);
 
-    if (!keyData) {
-      try {
-        await fetch(WEBHOOK_FAILED, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: `❌ **Błędna próba logowania o ${loginTime}**\`\n> Klucz: \`${key}\`` })
-        });
-      } catch(e) {}
-
+    if (!keyData || Object.keys(keyData).length === 0) {
       return res.status(400).json({ success: false, message: "Błędny klucz licencyjny!" });
     }
 
-    // Sprawdzamy powiązanie urządzenia
+    // Sprawdzenie wygaśnięcia licencji
+    if (keyData.expiresAt !== 'lifetime' && Date.now() > Number(keyData.expiresAt)) {
+      return res.status(400).json({ success: false, message: "Ten klucz wygasł!" });
+    }
+
+    // Sprawdzamy czy urządzenie się zgadza
     if (keyData.boundDevice) {
       if (keyData.boundDevice !== deviceId) {
         return res.status(400).json({ success: false, message: "Ten klucz jest przypisany do innego urządzenia!" });
       }
+      
+      // Jeśli urządzenie się zgadza, ale nie ma jeszcze zarejestrowanego nicku
+      if (!keyData.nick) {
+        return res.status(200).json({ success: false, needsRegistration: true });
+      }
+
+      // Log udanego logowania na Discorda
+      try {
+        await fetch(WEBHOOK_LOGS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            content: `✅ **Logowanie użytkownika o ${loginTime}**\n> Nick: \`${keyData.nick}\`\n> Klucz: \`${key}\`\n> Ważność: \`${keyData.durationLabel}\`` 
+          })
+        });
+      } catch(e) {}
+
+      return res.status(200).json({ success: true, message: "Zalogowano pomyślnie!" });
     } else {
-      // Jeśli klucz nie miał jeszcze urządzenia, przypisujemy obecne
-      await kv.hset(`key:${key}`, { boundDevice: deviceId });
+      // Klucz nie ma jeszcze przypisanego urządzenia -> Wymagaj rejestracji nicku
+      return res.status(200).json({ success: false, needsRegistration: true });
+    }
+  }
+
+  // 3. REJESTRACJA NICKU I POWIAZANIE URZĄDZENIA
+  if (action === 'register') {
+    if (!key || !nick) {
+      return res.status(400).json({ success: false, message: "Wszystkie pola są wymagane!" });
     }
 
+    const keyData = await kv.hgetall(`key:${key}`);
+    if (!keyData || Object.keys(keyData).length === 0) {
+      return res.status(400).json({ success: false, message: "Nie znaleziono klucza!" });
+    }
+
+    if (keyData.boundDevice && keyData.boundDevice !== deviceId) {
+      return res.status(400).json({ success: false, message: "Klucz jest już zajęty przez inne urządzenie!" });
+    }
+
+    // Przypisujemy urządzenie i nick na stałe, zachowując parametry wygaśnięcia
+    await kv.hset(`key:${key}`, { 
+      boundDevice: deviceId, 
+      nick: nick,
+      expiresAt: keyData.expiresAt,
+      durationLabel: keyData.durationLabel
+    });
+
     try {
-      await fetch(WEBHOOK_SUCCESS, {
+      await fetch(WEBHOOK_LOGS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `✅ **Udane logowanie o ${loginTime}**\n> Klucz: \`${newKey}\`` })
+        body: JSON.stringify({ 
+          content: `📝 **Nowa rejestracja / Pierwsze logowanie o ${loginTime}**\n> Nick: \`${nick}\`\n> Klucz: \`${key}\`\n> Ważność: \`${keyData.durationLabel}\`` 
+        })
       });
     } catch(e) {}
 
-    return res.status(200).json({ success: true, message: "Licencja aktywowana!" });
+    return res.status(200).json({ success: true, message: "Zarejestrowano pomyślnie!" });
+  }
+
+  // 4. INFORMACJE O KLUCZU (Dla bota)
+  if (action === 'info') {
+    if (!key) {
+      return res.status(400).json({ success: false, message: "Podaj klucz!" });
+    }
+
+    const keyData = await kv.hgetall(`key:${key}`);
+    if (!keyData || Object.keys(keyData).length === 0) {
+      return res.status(404).json({ success: false, message: "Klucz nie istnieje w bazie!" });
+    }
+
+    let timeLeft = "Dożywotnio";
+    if (keyData.expiresAt !== 'lifetime') {
+      const remaining = Number(keyData.expiresAt) - Date.now();
+      if (remaining > 0) {
+        const hours = Math.floor(remaining / (1000 * 60 * 60));
+        const days = Math.floor(hours / 24);
+        timeLeft = days > 0 ? `${days} dni (${hours}h)` : `${hours} godzin`;
+      } else {
+        timeLeft = "Wygasł!";
+      }
+    }
+
+    const infoText = `📋 **Informacje o kluczu:**\n` +
+                     `> Klucz: \`${key}\`\n` +
+                     `> Nick: \`${keyData.nick || 'Brak (nieprzypisany)'}\`\n` +
+                     `> Urządzenie ID: \`${keyData.boundDevice ? keyData.boundDevice : 'Brak'}\`\n` +
+                     `> Typ ważności: \`${keyData.durationLabel || 'lifetime'}\`\n` +
+                     `> Pozostało czasu: \`${timeLeft}\``;
+
+    return res.status(200).json({ success: true, message: infoText });
+  }
+
+  // 5. ZWOLNIENIE LICENCJI / RESET URZĄDZENIA I NICKU (Dla bota)
+  if (action === 'reset') {
+    if (!key) {
+      return res.status(400).json({ success: false, message: "Podaj klucz do zresetowania!" });
+    }
+
+    const keyData = await kv.hgetall(`key:${key}`);
+    if (!keyData || Object.keys(keyData).length === 0) {
+      return res.status(404).json({ success: false, message: "Klucz nie istnieje!" });
+    }
+
+    await kv.hset(`key:${key}`, {
+      boundDevice: null,
+      nick: null,
+      expiresAt: keyData.expiresAt,
+      durationLabel: keyData.durationLabel
+    });
+
+    return res.status(200).json({ success: true, message: `Zresetowano przypisanie urządzenia i nicku dla klucza: ${key}` });
+  }
+
+  // 6. ZMIANA / PRZEDŁUŻENIE DATY WAŻNOŚCI (Dla bota)
+  if (action === 'extend') {
+    if (!key || !duration) {
+      return res.status(400).json({ success: false, message: "Podaj klucz oraz nowy czas ważności!" });
+    }
+
+    const keyData = await kv.hgetall(`key:${key}`);
+    if (!keyData || Object.keys(keyData).length === 0) {
+      return res.status(404).json({ success: false, message: "Klucz nie istnieje!" });
+    }
+
+    let expiresAt = null;
+    const now = Date.now();
+    if (duration === '1h') expiresAt = now + 60 * 60 * 1000;
+    else if (duration === '24h') expiresAt = now + 24 * 60 * 60 * 1000;
+    else if (duration === '7d') expiresAt = now + 7 * 24 * 60 * 60 * 1000;
+    else if (duration === '30d') expiresAt = now + 30 * 24 * 60 * 60 * 1000;
+    else expiresAt = 'lifetime';
+
+    await kv.hset(`key:${key}`, {
+      boundDevice: keyData.boundDevice,
+      nick: keyData.nick,
+      expiresAt: expiresAt,
+      durationLabel: duration
+    });
+
+    return res.status(200).json({ success: true, message: `Zaktualizowano ważność klucza ${key} na: ${duration}` });
+  }
+
+  // 7. USUNIĘCIE KLUCZA (Dla bota)
+  if (action === 'delete') {
+    if (!key) {
+      return res.status(400).json({ success: false, message: "Podaj klucz do usunięcia!" });
+    }
+
+    const exists = await kv.exists(`key:${key}`);
+    if (!exists) {
+      return res.status(404).json({ success: false, message: "Klucz nie istnieje!" });
+    }
+
+    await kv.del(`key:${key}`);
+    return res.status(200).json({ success: true, message: `Klucz ${key} został całkowicie usunięty z bazy.` });
   }
 
   return res.status(400).json({ error: 'Invalid action' });

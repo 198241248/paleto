@@ -40,10 +40,20 @@
 
   <div class="auth-overlay" id="authOverlay">
     <div class="auth-box">
-      <div class="auth-title">DOSTĘP DO SYSTEMU</div>
-      <div class="auth-subtitle">Wprowadź klucz licencyjny</div>
-      <input type="password" id="licenseInput" class="auth-input" placeholder="Klucz dostępu..." onkeypress="if(event.key==='Enter') checkLicense()">
-      <button class="auth-btn" onclick="checkLicense()">ZALOGUJ SIĘ</button>
+      <div class="auth-title" id="boxTitle">DOSTĘP DO SYSTEMU</div>
+      <div class="auth-subtitle" id="boxSubtitle">Wprowadź klucz licencyjny</div>
+      
+      <div id="stepKey">
+        <input type="password" id="licenseInput" class="auth-input" placeholder="Klucz dostępu..." onkeypress="if(event.key==='Enter') checkLicense()">
+        <button class="auth-btn" onclick="checkLicense()">DALEJ</button>
+      </div>
+
+      <div id="stepRegister" style="display: none;">
+        <div style="font-size: 14px; color: #8b949e; margin-bottom: 10px;">Klucz nierozpoznany lub nowy. Podaj swój nick:</div>
+        <input type="text" id="nickInput" class="auth-input" placeholder="Twój nick..." onkeypress="if(event.key==='Enter') registerAndLogin()">
+        <button class="auth-btn" onclick="registerAndLogin()">ZAREJESTRUJ I WEJDŹ</button>
+      </div>
+
       <div class="auth-error" id="authError">Błędny klucz licencyjny!</div>
     </div>
   </div>
@@ -53,32 +63,81 @@
     <div class="selection-screen">
       <div class="selection-title">MENU GŁÓWNE</div>
       <div class="cards-grid">
-        <a href="paleto.html" class="hack-card"><h3>BANK PALETO</h3><p>* Tryb wieloosobowy</p><p>* Trzy moduły</p>
-        <a href="maze.html" class="hack-card"><h3>BANK MAZE</h3><p>* Tryb wieloosobowy</p><p>* Trzy role</p>
+        <a href="paleto.html" class="hack-card"><h3>BANK PALETO</h3><p>* Tryb wieloosobowy</p><p>* Trzy moduły</p></a>
+        <a href="maze.html" class="hack-card"><h3>BANK MAZE</h3><p>* Tryb wieloosobowy</p><p>* Trzy role</p></a>
         <a href="pine.html" class="hack-card"><h3>BANK PINE</h3><p>* Dwa etapy</p></a>
-        <a href="sekwencja.html" class="hack-card"><h3>SEKWENCJA BANK PALETO</h3>
+        <a href="sekwencja.html" class="hack-card"><h3>SEKWENCJA BANK PALETO</h3></a>
         <a href="sejfmazebank.html" class="hack-card"><h3>SEJF MAZEBANK</h3></a>
+        <a href="kasyno.html" class="hack-card"><h3>KASYNO</h3><span class="badge-soon">Wkrótce</span></a>
         <a href="digitalden.html" class="hack-card"><h3>DIGITAL DEN</h3></a>
         <a href="herbal.html" class="hack-card"><h3>HERBAL DISTRICT</h3></a>
         <a href="villa.html" class="hack-card"><h3>VILLA</h3><p>* Dwa etapy</p></a>
         <a href="konwoj.html" class="hack-card"><h3>KONWÓJ WOJSKOWY</h3></a>
-        <a href="ammunation.html" class="hack-card"><h3>AMMUNATION</h3><p>* Dwa etapy</p></a
+        <a href="ammunation.html" class="hack-card"><h3>AMMUNATION</h3><p>* Dwa etapy</p></a>
       </div>
     </div>
   </div>
 
 <script>
+  function getDeviceId() {
+    let deviceId = localStorage.getItem('paleto_device_id');
+    if (!deviceId) {
+      deviceId = 'dev_' + Math.random().toString(36).substring(2) + Date.now();
+      localStorage.setItem('paleto_device_id', deviceId);
+    }
+    return deviceId;
+  }
+
   async function checkLicense() {
     const inputVal = document.getElementById('licenseInput').value.trim();
     const errorEl = document.getElementById('authError');
-
     if (!inputVal) return;
 
     try {
       const response = await fetch('/api/license', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', key: inputVal })
+        body: JSON.stringify({ action: 'verify', key: inputVal, deviceId: getDeviceId() })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        sessionStorage.setItem('paleto_auth', 'true');
+        document.getElementById('authOverlay').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'flex';
+      } else if (data.needsRegistration) {
+        // Klucz jest poprawny, ale nie ma jeszcze przypisanego nicku (pierwsze użycie na urządzeniu)
+        document.getElementById('boxTitle').innerText = "REJESTRACJA";
+        document.getElementById('boxSubtitle').innerText = "Przypisz nick do klucza";
+        document.getElementById('stepKey').style.display = 'none';
+        document.getElementById('stepRegister').style.display = 'block';
+        errorEl.style.display = 'none';
+      } else {
+        errorEl.innerText = data.message || "Błędny lub wykorzystany klucz!";
+        errorEl.style.display = 'block';
+      }
+    } catch (e) {
+      errorEl.innerText = "Błąd połączenia z serwerem.";
+      errorEl.style.display = 'block';
+    }
+  }
+
+  async function registerAndLogin() {
+    const inputVal = document.getElementById('licenseInput').value.trim();
+    const nickVal = document.getElementById('nickInput').value.trim();
+    const errorEl = document.getElementById('authError');
+
+    if (!nickVal) {
+      errorEl.innerText = "Wpisz swój nick!";
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'register', key: inputVal, nick: nickVal, deviceId: getDeviceId() })
       });
       const data = await response.json();
 
@@ -87,9 +146,8 @@
         document.getElementById('authOverlay').style.display = 'none';
         document.getElementById('mainContent').style.display = 'flex';
       } else {
-        errorEl.innerText = data.message || "Błędny lub wykorzystany klucz!";
+        errorEl.innerText = data.message || "Błąd rejestracji!";
         errorEl.style.display = 'block';
-        document.getElementById('licenseInput').value = '';
       }
     } catch (e) {
       errorEl.innerText = "Błąd połączenia z serwerem.";
