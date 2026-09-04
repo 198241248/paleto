@@ -34,7 +34,8 @@
 
   /* SYSTEM GOTOWOŚCI */
   .ready-screen { display: none; width: 100%; max-width: 500px; background: #131822; border: 1px solid #1f2937; border-radius: 10px; padding: 25px; text-align: center; animation: fadeScaleIn 0.3s ease-out; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-  .ready-title { font-family: 'Teko', sans-serif; font-size: 36px; color: #4dd8ff; margin-bottom: 15px; }
+  .ready-title { font-family: 'Teko', sans-serif; font-size: 36px; color: #4dd8ff; margin-bottom: 5px; }
+  .room-code-display { font-size: 14px; color: #8b949e; margin-bottom: 15px; background: #0d1117; padding: 6px; border-radius: 4px; border: 1px solid #1f2937; }
   .player-slot { display: flex; justify-content: space-between; align-items: center; background: #0d1117; padding: 12px 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #1f2937; }
   .btn-slot-select { background: #1f6feb; border: none; color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
   .btn-slot-select:hover { background: #388bfd; }
@@ -122,14 +123,18 @@
 
     <div id="createLobbyBox" class="lobby-box" style="display: none;">
       <h3 style="font-family:'Teko'; font-size:28px; color:#e6edf3; margin-bottom: 10px;">Stwórz Własne Lobby</h3>
-      <input type="text" id="createRoomName" placeholder="Nazwa Pokoju...">
+      <label style="font-size:12px; color:#8b949e;">Typ Lobby:</label>
+      <select id="createLobbyType">
+        <option value="public">Publiczne (widoczne na liście)</option>
+        <option value="private">Prywatne (tylko na kod)</option>
+      </select>
       <button class="btn-start" style="margin-top: 10px;" onclick="initPeerCreated()">STWÓRZ I WEJDŹ</button>
       <button class="btn-ready" style="background: #21262d; margin-top: 8px;" onclick="backToLobbyMenu()">◄ WSTECZ</button>
     </div>
 
     <div id="privateJoinBox" class="lobby-box" style="display: none;">
       <h3 style="font-family:'Teko'; font-size:28px; color:#e6edf3; margin-bottom: 10px;">Dołącz na Kod</h3>
-      <input type="text" id="privateRoomCode" placeholder="Kod / Nazwa Pokoju...">
+      <input type="text" id="privateRoomCode" placeholder="Wpisz dokładny kod pokoju...">
       <button class="btn-start" style="margin-top: 10px;" onclick="initPeerPrivate()">DOŁĄCZ</button>
       <button class="btn-ready" style="background: #21262d; margin-top: 8px;" onclick="backToLobbyMenu()">◄ WSTECZ</button>
     </div>
@@ -149,6 +154,7 @@
   <!-- GOTOWOŚĆ I WYBÓR ROLI -->
   <div class="ready-screen" id="readyScreen">
     <div class="ready-title">POCZEKALNIA POKOJU</div>
+    <div class="room-code-display" id="roomCodeDisplay">Kod pokoju: Ładowanie...</div>
     <div id="slotsContainer">
       <div class="player-slot">
         <span id="text-niemowa">1. Niemowa: [Wolne]</span>
@@ -243,6 +249,7 @@ let hostConn = null;
 let myRole = null; 
 let roomId = '';
 let isReady = false;
+let lobbySyncInterval = null;
 
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1545382823404240926/jXW9aJUUBYhGZREcBmdlqdnvD1P3hGmOqO1wQ9unK1O3xJqTDGXznRbZMkWdpIIsge8C"; 
 
@@ -257,9 +264,9 @@ function sendDiscordLog(message) {
 }
 
 let roomPlayers = {
-  niemowa: { nick: '', ready: false },
-  posrednik: { nick: '', ready: false },
-  niewidomy: { nick: '', ready: false }
+  niemowa: { nick: '', ready: false, connId: null },
+  posrednik: { nick: '', ready: false, connId: null },
+  niewidomy: { nick: '', ready: false, connId: null }
 };
 
 let timeLeft = 180;
@@ -339,7 +346,7 @@ function fetchPublicServers() {
       let answered = false;
 
       testPeer.on('open', () => {
-        let conn = testPeer.connect(`${room.name}-host`, { reliable: true });
+        let conn = testPeer.connect(`${room.code}-host`, { reliable: true });
         
         conn.on('open', () => {
           if (!answered) {
@@ -354,7 +361,7 @@ function fetchPublicServers() {
           if (!answered) {
             answered = true;
             testPeer.destroy();
-            checkNextRoom(index + 1); // Pomiń nieaktywne pokoje
+            checkNextRoom(index + 1);
           }
         }, 1200);
       });
@@ -386,47 +393,50 @@ function renderServersList(rooms, container) {
     container.innerHTML += `
       <div style="background:#0d1117; border:1px solid #1f2937; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <div style="font-weight:bold; color:#4dd8ff;">${room.name}</div>
+          <div style="font-weight:bold; color:#4dd8ff;">Lobby: ${room.code}</div>
           <div style="font-size:11px; color:#8b949e;">Host: ${room.host}</div>
         </div>
-        <button style="background:#1f6feb; border:none; color:#fff; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold;" onclick="joinPublicRoom('${room.name}')">Dołącz</button>
+        <button style="background:#1f6feb; border:none; color:#fff; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold;" onclick="joinPublicRoom('${room.code}')">Dołącz</button>
       </div>`;
   });
 }
 
-function registerPublicRoom(roomName, hostNick) {
+function registerPublicRoom(roomCode, hostNick) {
   let rooms = JSON.parse(localStorage.getItem('paleto_public_rooms') || '[]');
-  if(!rooms.some(r => r.name === roomName)) {
-    rooms.push({ name: roomName, host: hostNick });
+  if(!rooms.some(r => r.code === roomCode)) {
+    rooms.push({ code: roomCode, host: hostNick });
     localStorage.setItem('paleto_public_rooms', JSON.stringify(rooms));
   }
 }
 
-function removePublicRoom(roomName) {
+function removePublicRoom(roomCode) {
   let rooms = JSON.parse(localStorage.getItem('paleto_public_rooms') || '[]');
-  rooms = rooms.filter(r => r.name !== roomName);
+  rooms = rooms.filter(r => r.code !== roomCode);
   localStorage.setItem('paleto_public_rooms', JSON.stringify(rooms));
 }
 
 function initPeerCreated() {
-  roomId = document.getElementById('createRoomName').value.trim();
-  if(!roomId) return alert('Podaj nazwę pokoju!');
+  const lobbyType = document.getElementById('createLobbyType').value;
+  roomId = 'PALETO-' + Math.random().toString(36).substring(2, 7).toUpperCase();
 
-  registerPublicRoom(roomId, myNick);
+  if(lobbyType === 'public') {
+    registerPublicRoom(roomId, myNick);
+  }
+
   startPeerConnection(true);
-  sendDiscordLog(`Gracz **${myNick}** utworzył lobby **${roomId}**.`);
+  sendDiscordLog(`Gracz **${myNick}** utworzył lobby (${lobbyType}) o kodzie **${roomId}**.`);
 }
 
 function initPeerPrivate() {
-  roomId = document.getElementById('privateRoomCode').value.trim();
+  roomId = document.getElementById('privateRoomCode').value.trim().toUpperCase();
   if(!roomId) return alert('Podaj kod pokoju!');
 
   startPeerConnection(false);
-  sendDiscordLog(`Gracz **${myNick}** dołączył do pokoju **${roomId}**.`);
+  sendDiscordLog(`Gracz **${myNick}** dołączył prywatnie do kodu **${roomId}**.`);
 }
 
-function joinPublicRoom(roomName) {
-  roomId = roomName;
+function joinPublicRoom(roomCode) {
+  roomId = roomCode;
   startPeerConnection(false);
   sendDiscordLog(`Gracz **${myNick}** dołączył publicznie do **${roomId}**.`);
 }
@@ -434,6 +444,7 @@ function joinPublicRoom(roomName) {
 function startPeerConnection(isHost) {
   document.getElementById('lobbyScreen').style.display = 'none';
   document.getElementById('readyScreen').style.display = 'block';
+  document.getElementById('roomCodeDisplay').innerText = `Kod pokoju: ${roomId}`;
 
   let peerId = isHost ? `${roomId}-host` : `${roomId}-${Math.random().toString(36).substring(2,7)}`;
   
@@ -447,10 +458,16 @@ function startPeerConnection(isHost) {
     if (!isHost) {
       connectToHost();
     } else {
+      // Host rozgłasza stan lobby co 1.5 sekundy (zapewnia dynamiczne odświeżanie)
+      lobbySyncInterval = setInterval(() => {
+        broadcastToAll({ type: 'LOBBY_STATE', players: roomPlayers });
+      }, 1500);
+
       peer.on('connection', (conn) => {
         conn.on('open', () => {
-          conn.on('data', (data) => handleData(data, conn));
+          conn.send({ type: 'LOBBY_STATE', players: roomPlayers });
         });
+        conn.on('data', (data) => handleData(data, conn));
         conn.on('close', () => {
           for (let r in roomPlayers) {
             if (roomPlayers[r].connId === conn.peer) {
@@ -463,12 +480,17 @@ function startPeerConnection(isHost) {
       });
     }
   });
+
+  peer.on('error', (err) => {
+    alert("Błąd połączenia PeerJS: " + err.type);
+    location.reload();
+  });
 }
 
 function connectToHost() {
-  hostConn = peer.connect(`${roomId}-host`);
+  hostConn = peer.connect(`${roomId}-host`, { reliable: true });
   hostConn.on('open', () => {
-    hostConn.send({ type: 'JOIN_LOBBY', nick: myNick });
+    // Połączony – czekamy na pakiety stanu
   });
   hostConn.on('data', (data) => handleData(data, hostConn));
   hostConn.on('close', () => {
@@ -482,7 +504,7 @@ function selectRole(role) {
     return alert("Ta rola jest już zajęta!");
   }
 
-  // Wyczyść poprzednią rolę gracza, jeśli jakąś miał (zapobiega przejmowaniu wielu ról)
+  // Wyczyść poprzednią rolę gracza, żeby zapobiec posiadaniu wielu ról naraz
   for (let r in roomPlayers) {
     if (roomPlayers[r].nick === myNick) {
       roomPlayers[r] = { nick: '', ready: false, connId: null };
@@ -570,7 +592,8 @@ function updateReadyUI() {
 function checkAllReady() {
   if(roomPlayers.niemowa.ready && roomPlayers.posrednik.ready && roomPlayers.niewidomy.ready) {
     if(peer.id === `${roomId}-host`) {
-      removePublicRoom(roomId); // Usuń pokój z publicznej listy po starcie gry
+      if (lobbySyncInterval) clearInterval(lobbySyncInterval);
+      removePublicRoom(roomId);
       broadcastToAll({ type: 'START_COUNTDOWN' });
       startCountdown();
     }
@@ -578,6 +601,7 @@ function checkAllReady() {
 }
 
 function startCountdown() {
+  if (lobbySyncInterval) clearInterval(lobbySyncInterval);
   let cnt = 3;
   const overlay = document.getElementById('countdownOverlay');
   overlay.style.display = 'block';
@@ -673,9 +697,7 @@ function broadcastToAll(data) {
 
 function handleData(data, conn) {
   if (peer.id === `${roomId}-host`) {
-    if (data.type === 'JOIN_LOBBY') {
-      conn.clientNick = data.nick;
-    } else if (data.type === 'SELECT_ROLE') {
+    if (data.type === 'SELECT_ROLE') {
       for (let r in roomPlayers) {
         if (roomPlayers[r].connId === conn.peer) {
           roomPlayers[r] = { nick: '', ready: false, connId: null };
@@ -686,7 +708,9 @@ function handleData(data, conn) {
       broadcastToAll({ type: 'LOBBY_STATE', players: roomPlayers });
       updateReadyUI();
     } else if (data.type === 'READY_CHANGE') {
-      roomPlayers[data.role].ready = data.ready;
+      if(roomPlayers[data.role]) {
+        roomPlayers[data.role].ready = data.ready;
+      }
       broadcastToAll({ type: 'LOBBY_STATE', players: roomPlayers });
       updateReadyUI();
       checkAllReady();
